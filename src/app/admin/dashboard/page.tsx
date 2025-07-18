@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import ActivationCodesList from '@/components/activation/ActivationCodesList'
@@ -30,7 +30,8 @@ function TabButton({ id, label, isActive, onClick }: TabButtonProps) {
   )
 }
 
-export default function AdminDashboard() {
+// 将使用 useSearchParams 的逻辑分离到一个组件中
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -104,7 +105,7 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <button
                 onClick={handleLogout}
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
               >
                 退出登录
               </button>
@@ -136,6 +137,7 @@ export default function AdminDashboard() {
         {activeTab === 'codes' && <ActivationCodesList confirmDialog={confirmDialog} setConfirmDialog={setConfirmDialog} />}
         {activeTab === 'logs' && <ActivationLogs codeIdFilter={codeIdFilter} />}
       </div>
+      
       {/* 挂载弹窗 */}
       <ConfirmDialog
         open={confirmDialog.open}
@@ -145,5 +147,26 @@ export default function AdminDashboard() {
         onCancel={() => setConfirmDialog(d => ({ ...d, open: false }))}
       />
     </div>
+  )
+}
+
+// Loading 组件
+function DashboardLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">加载中...</p>
+      </div>
+    </div>
+  )
+}
+
+// 主组件，用 Suspense 包裹
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   )
 }
