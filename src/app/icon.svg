@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="256" cy="256" r="256" fill="url(#gradient)"/>
+  
+  <!-- 钥匙图标 -->
+  <path d="M336 192C336 156.7 307.3 128 272 128C236.7 128 208 156.7 208 192C208 200.8 209.6 209.2 212.5 216.9L120 309.4V352H168V312H208V272H248L282.5 237.5C294.7 244.5 309.9 248 326 248H336V192ZM272 176C281 176 288 183 288 192C288 201 281 208 272 208C263 208 256 201 256 192C256 183 263 176 272 176Z" fill="white"/>
+  
+  <!-- 渐变定义 -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7E22CE"/>
+    </linearGradient>
+  </defs>
+</svg> 

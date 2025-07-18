@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model ActivationCode {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique
+  isUsed          Boolean   @default(false)
+  usedAt          DateTime?
+  usedBy          String?   // 机器标识
+  usedIp          String?   // 激活时的IP地址
+  userAgent       String?   // 用户代理信息
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime?
+  isDisabled      Boolean   @default(false) // 是否被禁用
+
+  @@index([code])
+  @@index([isUsed])
+  @@index([createdAt])
+  @@index([usedBy])
+}
+
+// 详细的激活日志表
+model ActivationLog {
+  id                Int      @id @default(autoincrement())
+  activationCodeId  Int?     // 激活码ID（可为空，防止删除激活码影响日志）
+  activationCode    String   // 激活码文本（保存文本内容，确保日志完整性）
+  machineId         String   // 机器标识
+  ipAddress         String?  // 访问IP
+  userAgent         String?  // 浏览器用户代理
+  country           String?  // 国家（可通过IP解析）
+  city              String?  // 城市（可通过IP解析）
+  isSuccess         Boolean  // 是否验证成功
+  errorMessage      String?  // 失败时的错误信息
+  createdAt         DateTime @default(now())
+
+  @@index([activationCodeId])
+  @@index([activationCode])
+  @@index([machineId])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@index([isSuccess])
+}
