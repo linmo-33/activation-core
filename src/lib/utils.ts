@@ -9,8 +9,13 @@ export function generateActivationCode(length: number = 16): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let result = ''
   
+  // 使用crypto模块生成安全的随机字节
+  const randomBytes = crypto.randomBytes(length)
+  
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+    // 使用随机字节的值来选择字符，确保均匀分布
+    const randomIndex = randomBytes[i] % chars.length
+    result += chars.charAt(randomIndex)
   }
   
   return result
@@ -58,7 +63,7 @@ export function createErrorResponse(message: string, status: number = 400) {
 /**
  * 格式化成功响应
  */
-export function createSuccessResponse(data?: any, message?: string) {
+export function createSuccessResponse(data?: Record<string, unknown>, message?: string) {
   return Response.json({
     success: true,
     message,

@@ -15,6 +15,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "激活码管理系统",
   description: "企业级激活码生成、验证和管理平台，提供完整的激活码生命周期管理解决方案",
+  icons: {
+    icon: [
+      { url: '/activation-key.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' }
+    ],
+    shortcut: '/activation-key.svg',
+    apple: '/activation-key.svg',
+  }
 };
 
 export default function RootLayout({
