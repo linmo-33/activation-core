@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  activation-core-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: activation-core
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      # 数据持久化：将宿主机的data目录挂载到容器
+      - ./data:/app/data
+    networks:
+      - activation-core-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # 资源限制（可选）
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+# 定义网络
+networks:
+  activation-core-network:
+    driver: bridge
+
+# 定义卷（如果需要命名卷而非绑定挂载）
+volumes:
+  activation-core-data:
+    driver: local

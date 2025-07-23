@@ -1,0 +1,91 @@
+# Docker构建忽略规则
+# 减少构建上下文大小，提升构建速度
+
+# 依赖和构建产物
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js构建产物
+.next
+out
+
+# 生产环境构建
+/build
+
+# 运行时文件
+*.tsbuildinfo
+next-env.d.ts
+
+# 环境配置文件
+.env
+.env*.local
+.env.development
+.env.production
+
+# IDE和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git版本控制
+.git
+.gitignore
+.gitattributes
+
+# 测试相关
+coverage/
+.nyc_output
+
+# 临时文件
+*.tmp
+*.temp
+
+# 日志文件
+logs
+*.log
+
+# 数据库文件（开发环境）
+*.db
+*.sqlite
+*.sqlite3
+prisma/dev.db
+
+# Docker相关
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# 文档和说明
+README*.md
+CHANGELOG.md
+LICENSE
+docs/
+
+# 配置文件
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.json
+postcss.config.*
+tailwind.config.*
+
+# Vercel部署
+.vercel
+
+# 其他工具
+.npm
+.eslintcache 

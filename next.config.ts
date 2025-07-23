@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     // 如果也想禁用 TypeScript 检查
     ignoreBuildErrors: true,
   },
+  // 启用独立构建输出，用于Docker部署
+  output: 'standalone',
 };
 
 export default nextConfig;
