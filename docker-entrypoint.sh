@@ -5,8 +5,6 @@
 
 set -e
 
-[ "$LOG_LEVEL_NUM" -ge 3 ] && echo "🚀 启动激活码管理系统容器..."
-
 # 日志级别设置 (ERROR=1, WARN=2, INFO=3, DEBUG=4)
 LOG_LEVEL=${LOG_LEVEL:-WARN}
 
@@ -18,6 +16,9 @@ case "$LOG_LEVEL" in
     DEBUG) LOG_LEVEL_NUM=4 ;;
     *)     LOG_LEVEL_NUM=2 ;; # 默认WARN级别
 esac
+
+# 显示启动信息
+[ "$LOG_LEVEL_NUM" -ge 3 ] && echo "🚀 启动激活码管理系统容器..."
 
 # 日志函数
 log_info() {
@@ -45,10 +46,7 @@ check_env() {
         export DATABASE_URL="file:/app/data/prod.db"
     fi
     
-    if [ -z "$JWT_SECRET" ]; then
-        log_warning "JWT_SECRET未设置，使用默认值（生产环境请修改）"
-        export JWT_SECRET="your-super-secret-jwt-key-change-in-production"
-    fi
+    # JWT_SECRET现在由JWT密钥文件管理，无需环境变量设置
     
     if [ -z "$NODE_ENV" ]; then
         export NODE_ENV="production"
@@ -73,6 +71,36 @@ setup_data_directory() {
     log_success "数据目录设置完成"
 }
 
+# JWT密钥生成
+generate_jwt_secret() {
+    log_info "检查JWT密钥..."
+    
+    JWT_SECRET_FILE="/app/data/.jwt-secret"
+    
+    if [ ! -f "$JWT_SECRET_FILE" ]; then
+        log_info "生成JWT密钥..."
+        
+        # 使用Node.js生成安全的JWT密钥
+        node -e "
+        const crypto = require('crypto');
+        const fs = require('fs');
+        const secret = crypto.randomBytes(32).toString('base64');
+        fs.writeFileSync('$JWT_SECRET_FILE', secret, 'utf8');
+        fs.chmodSync('$JWT_SECRET_FILE', 0o600);
+        console.log('JWT密钥生成完成');
+        "
+        
+        if [ $? -eq 0 ]; then
+            log_success "JWT密钥生成成功"
+        else
+            log_error "JWT密钥生成失败"
+            exit 1
+        fi
+    else
+        log_info "JWT密钥文件已存在，跳过生成"
+    fi
+}
+
 # 数据库初始化
 init_database() {
     log_info "初始化数据库..."
@@ -83,7 +111,7 @@ init_database() {
     if [ ! -f "$DB_FILE" ]; then
         log_info "数据库文件不存在，创建新数据库..."
         
-        # 设置Prisma环境变量
+        # 确保DATABASE_URL指向正确路径
         export DATABASE_URL="file:/app/data/prod.db"
         
         # 推送数据库架构
@@ -105,13 +133,25 @@ init_database() {
             export ADMIN_USERNAME="admin"
         fi
         
-        # 运行管理员初始化脚本
-        node scripts/init-admin.js
+        # 运行管理员初始化脚本并捕获输出
+        ADMIN_OUTPUT=$(node scripts/init-admin.js 2>&1)
+        INIT_STATUS=$?
         
-        if [ $? -eq 0 ]; then
+        if [ $INIT_STATUS -eq 0 ]; then
             log_success "管理员账户初始化成功"
+            
+            # 提取并显示密码信息（如果有）
+            if echo "$ADMIN_OUTPUT" | grep -q "密码:"; then
+                log_success "=========================================="
+                log_success "管理员登录信息："
+                echo "$ADMIN_OUTPUT" | grep "用户名:" | sed 's/.*用户名: /[SUCCESS] 用户名: /'
+                echo "$ADMIN_OUTPUT" | grep "密码:" | sed 's/.*密码: /[SUCCESS] 初始密码: /'
+                log_success "=========================================="
+                log_warning "请妥善保存密码，首次登录后建议修改"
+            fi
         else
             log_error "管理员账户初始化失败"
+            echo "$ADMIN_OUTPUT"
             exit 1
         fi
         
@@ -161,10 +201,13 @@ main() {
     # 2. 设置数据目录
     setup_data_directory
     
-    # 3. 初始化数据库
+    # 3. 生成JWT密钥
+    generate_jwt_secret
+    
+    # 4. 初始化数据库
     init_database
     
-    # 4. 启动Next.js应用
+    # 5. 启动Next.js应用
     log_success "系统初始化完成，启动应用..."
     
     # 使用exec来确保信号能够正确传递给Node.js进程

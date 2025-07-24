@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import ActivationCodesList from '@/components/activation/ActivationCodesList'
 import ActivationLogs from '@/components/activation/ActivationLogs'
+import ChangePasswordModal from '@/components/admin/ChangePasswordModal'
 import { ConfirmDialogProps } from '@/components/activation/types'
 
 // Tab组件
@@ -43,6 +44,8 @@ function DashboardContent() {
     content: '', 
     onConfirm: () => {} 
   })
+  const [changePasswordModal, setChangePasswordModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -93,6 +96,11 @@ function DashboardContent() {
     }
   }
 
+  const handlePasswordChangeSuccess = () => {
+    setSuccessMessage('密码修改成功！')
+    setTimeout(() => setSuccessMessage(''), 3000)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 导航栏 */}
@@ -102,7 +110,13 @@ function DashboardContent() {
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">激活码管理系统</h1>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setChangePasswordModal(true)}
+                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                修改密码
+              </button>
               <button
                 onClick={handleLogout}
                 className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -115,6 +129,18 @@ function DashboardContent() {
       </nav>
 
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* 成功消息 */}
+        {successMessage && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {successMessage}
+            </div>
+          </div>
+        )}
+
         {/* Tab导航 */}
         <div className="mb-8">
           <div className="inline-flex bg-gray-100 rounded-lg p-1">
@@ -145,6 +171,13 @@ function DashboardContent() {
         content={confirmDialog.content}
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog(d => ({ ...d, open: false }))}
+      />
+      
+      {/* 密码修改模态框 */}
+      <ChangePasswordModal
+        open={changePasswordModal}
+        onClose={() => setChangePasswordModal(false)}
+        onSuccess={handlePasswordChangeSuccess}
       />
     </div>
   )

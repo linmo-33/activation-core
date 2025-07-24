@@ -28,13 +28,18 @@ RUN npx prisma generate
 # 构建 Next.js 应用
 RUN npm run build
 
+# 编译 TypeScript 脚本文件
+RUN npx tsc scripts/init-admin.ts --outDir scripts --target es2018 --module commonjs --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
+
 # ===== 生产运行阶段 =====
 FROM node:18-alpine AS runner
 WORKDIR /app
 
 # 设置生产环境
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV LOG_LEVEL=WARN
+ENV DATABASE_URL="file:/app/data/prod.db"
 
 # 创建非root用户
 RUN addgroup --system --gid 1001 nodejs

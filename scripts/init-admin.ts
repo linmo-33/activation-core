@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { PrismaClient } from '@prisma/client'
-import { hashPassword } from '../src/lib/auth'
+import { hashPassword, generateStrongPassword } from '../src/lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -18,7 +18,7 @@ async function initAdmin() {
 
     // 从环境变量获取管理员信息，或使用默认值
     const username = process.env.ADMIN_USERNAME || 'admin'
-    const password = process.env.ADMIN_PASSWORD || generateRandomPassword()
+    const password = process.env.ADMIN_PASSWORD || generateStrongPassword()
 
     // 创建管理员账户
     const hashedPassword = await hashPassword(password)
@@ -45,16 +45,7 @@ async function initAdmin() {
   }
 }
 
-function generateRandomPassword(length: number = 12): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-  let password = ''
-  
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  
-  return password
-}
+// generateRandomPassword函数已移动到src/lib/auth.ts作为generateStrongPassword
 
 // 执行初始化
 initAdmin().catch(console.error) 
