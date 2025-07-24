@@ -1,26 +1,25 @@
 # 多阶段构建 Dockerfile for Activation Core
 
-# ===== 依赖安装阶段 =====
-FROM node:18-bullseye AS deps
-# 安装依赖库
+# =========================================
+# 1. 构建阶段 (Builder)
+# - 使用 bullseye 确保依赖库可用
+# - 优化缓存策略，仅在 package.json 或 package-lock.json 变动时才重装依赖
+# =========================================
+FROM node:18-bullseye AS builder
+WORKDIR /app
+
+# 安装系统依赖库，为 Prisma 和其他原生模块做准备
 RUN apt-get update && apt-get install -y libc6 libssl1.1 && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
 
-# 复制包管理文件
+# 仅复制包管理文件以利用缓存
 COPY package.json package-lock.json* ./
-# 安装依赖
-RUN npm ci --only=production
 
-# ===== 构建阶段 =====
-FROM node:18 AS builder
-WORKDIR /app
-
-# 复制依赖和源代码
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# 安装所有依赖（包括开发依赖）
+# 安装所有依赖（包括开发依赖），这一步会被高效缓存
 RUN npm ci
+
+# 复制所有源代码
+# 将此步骤后置，确保代码变更不会导致上面的依赖重装
+COPY . .
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
@@ -31,8 +30,11 @@ RUN npm run build
 # 编译 TypeScript 脚本文件
 RUN npx tsc scripts/init-admin.ts --outDir scripts --target es2018 --module commonjs --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
 
-# ===== 生产运行阶段 =====
-FROM node:18 AS runner
+# =========================================
+# 2. 生产运行阶段 (Runner)
+# - 使用极简的 slim 镜像，大幅减小最终镜像体积
+# =========================================
+FROM node:18-bullseye-slim AS runner
 WORKDIR /app
 
 # 设置生产环境
@@ -41,34 +43,27 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV LOG_LEVEL=WARN
 ENV DATABASE_URL="file:/app/data/prod.db"
 
-# 创建非root用户
+# 创建非 root 用户，提升安全性
 RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid 1001 nextjs
 
-# 复制必需的文件
+# 从构建阶段复制必要产物
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
-
-# 复制入口脚本
-COPY docker-entrypoint.sh ./
+COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
-# 创建数据目录并设置权限
-RUN mkdir -p /app/data
-RUN chown -R nextjs:nodejs /app/data
-RUN chown -R nextjs:nodejs /app/prisma
+# 创建数据目录并授权
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
-# 设置用户
+# 切换到非 root 用户
 USER nextjs
 
 # 暴露端口
 EXPOSE 3000
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # 启动应用
 CMD ["./docker-entrypoint.sh"]
