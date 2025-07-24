@@ -5,30 +5,35 @@
 
 set -e
 
-echo "🚀 启动激活码管理系统容器..."
+[ "$LOG_LEVEL_NUM" -ge 3 ] && echo "🚀 启动激活码管理系统容器..."
 
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# 日志级别设置 (ERROR=1, WARN=2, INFO=3, DEBUG=4)
+LOG_LEVEL=${LOG_LEVEL:-WARN}
+
+# 根据日志级别确定数值
+case "$LOG_LEVEL" in
+    ERROR) LOG_LEVEL_NUM=1 ;;
+    WARN)  LOG_LEVEL_NUM=2 ;;
+    INFO)  LOG_LEVEL_NUM=3 ;;
+    DEBUG) LOG_LEVEL_NUM=4 ;;
+    *)     LOG_LEVEL_NUM=2 ;; # 默认WARN级别
+esac
 
 # 日志函数
 log_info() {
-    echo "${BLUE}[INFO]${NC} $1"
+    [ "$LOG_LEVEL_NUM" -ge 3 ] && echo "[INFO] $1"
 }
 
 log_success() {
-    echo "${GREEN}[SUCCESS]${NC} $1"
+    [ "$LOG_LEVEL_NUM" -ge 2 ] && echo "[SUCCESS] $1"
 }
 
 log_warning() {
-    echo "${YELLOW}[WARNING]${NC} $1"
+    [ "$LOG_LEVEL_NUM" -ge 2 ] && echo "[WARNING] $1"
 }
 
 log_error() {
-    echo "${RED}[ERROR]${NC} $1"
+    echo "[ERROR] $1"
 }
 
 # 检查必要的环境变量
@@ -160,7 +165,7 @@ main() {
     init_database
     
     # 4. 启动Next.js应用
-    log_info "启动Next.js应用..."
+    log_success "系统初始化完成，启动应用..."
     
     # 使用exec来确保信号能够正确传递给Node.js进程
     exec node server.js

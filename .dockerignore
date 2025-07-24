@@ -8,6 +8,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# CI/CD和版本控制
+.github
+.git
+.gitignore
+
 # Next.js构建产物
 .next
 out
