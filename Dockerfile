@@ -1,9 +1,9 @@
 # 多阶段构建 Dockerfile for Activation Core
 
 # ===== 依赖安装阶段 =====
-FROM node:18-alpine AS deps
-# 检查 https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine 了解为什么可能需要 libc6-compat
-RUN apk add --no-cache libc6-compat openssl1.1-compat
+FROM node:18 AS deps
+# 安装依赖库
+RUN apt-get update && apt-get install -y libc6 libssl1.1 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # 复制包管理文件
@@ -12,7 +12,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --only=production
 
 # ===== 构建阶段 =====
-FROM node:18-alpine AS builder
+FROM node:18 AS builder
 WORKDIR /app
 
 # 复制依赖和源代码
@@ -32,7 +32,7 @@ RUN npm run build
 RUN npx tsc scripts/init-admin.ts --outDir scripts --target es2018 --module commonjs --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
 
 # ===== 生产运行阶段 =====
-FROM node:18-alpine AS runner
+FROM node:18 AS runner
 WORKDIR /app
 
 # 设置生产环境
@@ -42,8 +42,7 @@ ENV LOG_LEVEL=WARN
 ENV DATABASE_URL="file:/app/data/prod.db"
 
 # 创建非root用户
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid 1001 nextjs
 
 # 复制必需的文件
 COPY --from=builder /app/.next/standalone ./
