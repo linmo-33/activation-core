@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db'
 import { verifyPassword, hashPassword, verifyJWT } from '@/lib/auth'
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils'
 
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     // 验证认证

@@ -1,5 +1,7 @@
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils'
 
+export const runtime = 'nodejs';
+
 export async function POST() {
   try {
     // 创建响应，清除auth-token cookie

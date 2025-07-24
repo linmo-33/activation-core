@@ -3,7 +3,7 @@
 # ===== 依赖安装阶段 =====
 FROM node:18-alpine AS deps
 # 检查 https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine 了解为什么可能需要 libc6-compat
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl1.1-compat
 WORKDIR /app
 
 # 复制包管理文件

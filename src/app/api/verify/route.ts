@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils'
 
+export const runtime = 'nodejs';
 
 // 记录激活日志
 async function logActivation(

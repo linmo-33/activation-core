@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { generateActivationCode } from '@/lib/utils'
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils'
 
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

@@ -17,11 +17,11 @@ export const metadata: Metadata = {
   description: "企业级激活码生成、验证和管理平台，提供完整的激活码生命周期管理解决方案",
   icons: {
     icon: [
-      { url: '/activation-key.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico' }
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.svg' }
     ],
-    shortcut: '/activation-key.svg',
-    apple: '/activation-key.svg',
+    shortcut: '/favicon.sv',
+    apple: '/favicon.svg',
   }
 };
 

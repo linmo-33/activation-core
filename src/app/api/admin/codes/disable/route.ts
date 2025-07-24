@@ -4,6 +4,8 @@ import { verifyJWT } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils'
 
+export const runtime = 'nodejs';
+
 interface DisableRequestBody {
   id?: unknown
   code?: unknown
