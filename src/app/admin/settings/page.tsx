@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AdminLayout } from "@/components/layout/admin-layout";
+import { AdminLayout } from "@/components/layout/admin-layout-client";
+import { CleanupExpiredCodesDialog } from "@/components/admin/cleanup-expired-codes-dialog";
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ import { Lock, AlertTriangle, Save, Eye, EyeOff, Settings } from "lucide-react";
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -37,7 +39,7 @@ export default function SettingsPage() {
       toast({
         title: "密码确认失败",
         description: "新密码和确认密码不匹配",
-        variant: "destructive",
+        variant: "warning",
       });
       return;
     }
@@ -46,7 +48,7 @@ export default function SettingsPage() {
       toast({
         title: "密码强度不足",
         description: "新密码长度至少为6个字符",
-        variant: "destructive",
+        variant: "warning",
       });
       return;
     }
@@ -70,6 +72,7 @@ export default function SettingsPage() {
         toast({
           title: "密码修改成功",
           description: "管理员密码已更新",
+          variant: "success",
         });
         setPasswordForm({
           currentPassword: "",
@@ -94,41 +97,13 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDatabaseCleanup = async () => {
-    if (!confirm("确定要清理过期的激活码吗？此操作不可撤销。")) {
-      return;
-    }
+  const handleDatabaseCleanup = () => {
+    setCleanupDialogOpen(true);
+  };
 
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/admin/codes/cleanup", {
-        method: "POST",
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: "清理完成",
-          description: `已清理 ${result.data?.cleaned || 0} 个过期激活码`,
-        });
-        // 清理完成，无需刷新系统信息
-      } else {
-        toast({
-          title: "清理失败",
-          description: result.message || "清理操作失败",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "清理失败",
-        description: "网络错误，请稍后重试",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleCleanupComplete = () => {
+    // 清理完成后的回调，可以在这里刷新其他数据
+    console.log("清理操作完成");
   };
 
   return (
@@ -271,6 +246,13 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+
+      {/* 清理过期激活码弹窗 */}
+      <CleanupExpiredCodesDialog
+        open={cleanupDialogOpen}
+        onOpenChange={setCleanupDialogOpen}
+        onCleanupComplete={handleCleanupComplete}
+      />
     </AdminLayout>
   );
 }

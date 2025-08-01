@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AdminLayout } from "@/components/layout/admin-layout";
+import { AdminLayout } from "@/components/layout/admin-layout-client";
+import { CleanupExpiredCodesDialog } from "@/components/admin/cleanup-expired-codes-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,6 +40,7 @@ import {
   Square,
   Key,
   Plus,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -87,6 +89,7 @@ export default function CodesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalCodes, setTotalCodes] = useState(0);
   const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
   useEffect(() => {
@@ -123,6 +126,7 @@ export default function CodesPage() {
       toast({
         title: "复制成功",
         description: `激活码 ${code} 已复制到剪贴板`,
+        variant: "success",
       });
     } catch (error) {
       toast({
@@ -150,6 +154,7 @@ export default function CodesPage() {
         toast({
           title: "重置成功",
           description: "激活码已重置为未使用状态",
+          variant: "success",
         });
       } else {
         toast({
@@ -188,7 +193,7 @@ export default function CodesPage() {
       toast({
         title: "请选择激活码",
         description: "请先选择要操作的激活码",
-        variant: "destructive",
+        variant: "warning",
       });
       return;
     }
@@ -214,6 +219,7 @@ export default function CodesPage() {
         toast({
           title: "操作成功",
           description: result.message,
+          variant: "success",
         });
       } else {
         toast({
@@ -268,6 +274,15 @@ export default function CodesPage() {
             <Button onClick={fetchCodes} disabled={isLoading}>
               <RefreshCw className="mr-2 h-4 w-4" />
               刷新
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setCleanupDialogOpen(true)}
+              className="text-orange-600 border-orange-200 hover:bg-orange-50"
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              清理过期
             </Button>
           </div>
         </div>
@@ -428,17 +443,13 @@ export default function CodesPage() {
                         </TableCell>
                         <TableCell>{getStatusBadge(code.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(code.created_at).toLocaleString("zh-CN")}
+                          {code.created_at || "-"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {code.expires_at
-                            ? new Date(code.expires_at).toLocaleString("zh-CN")
-                            : "永不过期"}
+                          {code.expires_at || "永不过期"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {code.used_at
-                            ? new Date(code.used_at).toLocaleString("zh-CN")
-                            : "-"}
+                          {code.used_at || "-"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {code.used_by_device_id || "-"}
@@ -477,6 +488,16 @@ export default function CodesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 清理过期激活码弹窗 */}
+      <CleanupExpiredCodesDialog
+        open={cleanupDialogOpen}
+        onOpenChange={setCleanupDialogOpen}
+        onCleanupComplete={() => {
+          // 清理完成后刷新列表
+          fetchCodes();
+        }}
+      />
     </AdminLayout>
   );
 }

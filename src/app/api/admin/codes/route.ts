@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getActivationCodes, createActivationCodes } from '@/lib/db';
-import { generateActivationCode } from '@/lib/utils';
+import { generateActivationCode, formatDateTimeForAPI } from '@/lib/utils';
 
 // 使用工具函数生成激活码
 
@@ -38,12 +38,20 @@ export async function GET(request: NextRequest) {
       offset
     });
 
+    // 格式化日期字段
+    const formattedCodes = result.codes.map(code => ({
+      ...code,
+      created_at: formatDateTimeForAPI(code.created_at),
+      expires_at: formatDateTimeForAPI(code.expires_at),
+      used_at: formatDateTimeForAPI(code.used_at)
+    }));
+
     return NextResponse.json(
       {
         success: true,
         message: '获取激活码列表成功',
         data: {
-          codes: result.codes,
+          codes: formattedCodes,
           pagination: {
             page,
             limit,
@@ -149,15 +157,23 @@ export async function POST(request: NextRequest) {
     // 保存到数据库
     const createdCodes = await createActivationCodes(codes);
 
+    // 格式化日期字段
+    const formattedCodes = createdCodes.map(code => ({
+      ...code,
+      created_at: formatDateTimeForAPI(code.created_at),
+      expires_at: formatDateTimeForAPI(code.expires_at),
+      used_at: formatDateTimeForAPI(code.used_at)
+    }));
+
     return NextResponse.json(
       {
         success: true,
         message: `成功生成 ${createdCodes.length} 个激活码`,
         data: {
-          codes: createdCodes,
+          codes: formattedCodes,
           summary: {
             generated: createdCodes.length,
-            expires_at: expiresAt?.toISOString() || null
+            expires_at: formatDateTimeForAPI(expiresAt)
           }
         }
       },

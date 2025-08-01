@@ -103,8 +103,8 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // 设置 HttpOnly Cookie
-    response.cookies.set('admin_token', token, {
+    // 设置新的 HttpOnly Cookie
+    response.cookies.set('token', token, {
       httpOnly: true,
       secure: false, // 开发环境设置为 false
       sameSite: 'lax', // 改为 lax 以避免跨站问题
@@ -112,17 +112,15 @@ export async function POST(request: NextRequest) {
       path: '/'
     });
 
-    // 添加调试日志
-    console.log('设置 Cookie:', {
-      token: token.substring(0, 20) + '...',
-      cookieOptions: {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
-        path: '/'
-      }
+    // 清除旧的 admin_token cookie（向后兼容）
+    response.cookies.set('admin_token', '', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/'
     });
+
 
     return response;
 
@@ -153,7 +151,16 @@ export async function DELETE() {
       { status: 200 }
     );
 
-    // 清除 Cookie
+    // 清除新的 token cookie
+    response.cookies.set('token', '', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/'
+    });
+
+    // 清除旧的 admin_token cookie（向后兼容）
     response.cookies.set('admin_token', '', {
       httpOnly: true,
       secure: false,
@@ -184,7 +191,7 @@ export async function DELETE() {
 export async function GET(request: NextRequest) {
   try {
     // 从 Cookie 中获取 token
-    const token = request.cookies.get('admin_token')?.value;
+    const token = request.cookies.get('token')?.value;
 
     if (!token) {
       return NextResponse.json(

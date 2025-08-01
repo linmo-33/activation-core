@@ -28,12 +28,14 @@ const protectedPaths = [
   '/admin',
   '/admin/codes',
   '/admin/generate',
+  '/admin/devices',
   '/admin/settings'
 ];
 
 // 需要保护的 API 路径
 const protectedApiPaths = [
   '/api/admin/codes',
+  '/api/admin/devices',
   '/api/admin/stats'
 ];
 
@@ -60,7 +62,7 @@ export function middleware(request: NextRequest) {
   }
 
   // 从 Cookie 中获取 token
-  const token = request.cookies.get('admin_token')?.value;
+  const token = request.cookies.get('token')?.value;
 
   if (!token) {
     // 如果是 API 路径，返回 401
@@ -86,16 +88,8 @@ export function middleware(request: NextRequest) {
       throw new Error('Invalid token payload');
     }
 
-    // 将用户信息添加到请求头中，供 API 使用
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-admin-id', decoded.id.toString());
-    requestHeaders.set('x-admin-username', decoded.username);
-
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
+    // Token 有效，允许访问
+    return NextResponse.next();
 
   } catch (error) {
     console.error('JWT 验证失败:', error);

@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
   try {
     // 执行清理操作 - 删除过期的激活码
     const cleanupResult = await query(`
-      DELETE FROM activation_codes 
-      WHERE expires_at IS NOT NULL 
+      DELETE FROM activation_codes
+      WHERE expires_at IS NOT NULL
       AND expires_at <= CURRENT_TIMESTAMP
       AND status = 'unused'
     `);
@@ -55,8 +55,8 @@ export async function GET() {
     // 统计可清理的过期激活码数量
     const expiredResult = await query(`
       SELECT COUNT(*) as expired_count
-      FROM activation_codes 
-      WHERE expires_at IS NOT NULL 
+      FROM activation_codes
+      WHERE expires_at IS NOT NULL
       AND expires_at <= CURRENT_TIMESTAMP
       AND status = 'unused'
     `);
@@ -64,8 +64,8 @@ export async function GET() {
     // 统计总的过期激活码（包括已使用的）
     const totalExpiredResult = await query(`
       SELECT COUNT(*) as total_expired
-      FROM activation_codes 
-      WHERE expires_at IS NOT NULL 
+      FROM activation_codes
+      WHERE expires_at IS NOT NULL
       AND expires_at <= CURRENT_TIMESTAMP
     `);
 

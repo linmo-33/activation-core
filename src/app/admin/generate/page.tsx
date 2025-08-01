@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AdminLayout } from "@/components/layout/admin-layout";
+import { AdminLayout } from "@/components/layout/admin-layout-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -110,7 +110,7 @@ export default function GeneratePage() {
       toast({
         title: "输入验证失败",
         description: validationError,
-        variant: "destructive",
+        variant: "warning",
       });
       return;
     }
@@ -136,21 +136,13 @@ export default function GeneratePage() {
       const result = await response.json();
 
       if (result.success) {
-        // 转换 API 返回的数据格式
+        // API 已返回格式化的日期，直接使用
         const newCodes: GeneratedCode[] = result.data.codes.map(
           (code: any) => ({
             id: code.id,
             code: code.code,
-            expiresAt: code.expires_at
-              ? new Date(code.expires_at)
-                  .toISOString()
-                  .slice(0, 19)
-                  .replace("T", " ")
-              : null,
-            createdAt: new Date(code.created_at)
-              .toISOString()
-              .slice(0, 19)
-              .replace("T", " "),
+            expiresAt: code.expires_at,
+            createdAt: code.created_at,
           })
         );
 
@@ -158,6 +150,7 @@ export default function GeneratePage() {
         toast({
           title: "生成成功",
           description: `成功生成 ${newCodes.length} 个激活码`,
+          variant: "success",
         });
       } else {
         toast({
@@ -185,6 +178,7 @@ export default function GeneratePage() {
       toast({
         title: "复制成功",
         description: `已复制 ${generatedCodes.length} 个激活码到剪贴板`,
+        variant: "success",
       });
     } catch (error) {
       toast({

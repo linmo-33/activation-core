@@ -46,6 +46,7 @@ export default function LoginPage() {
 
       if (result.success) {
         // 登录成功，跳转到目标页面
+        // 注意：不需要手动更新认证状态，AuthProvider 会自动检测 cookie 变化
         router.push(redirectTo);
         router.refresh(); // 刷新页面以更新认证状态
       } else {

@@ -18,10 +18,10 @@ export async function GET() {
 
     // 获取每日激活趋势（最近30天）
     const trendResult = await query(`
-      SELECT 
+      SELECT
         DATE(used_at) as date,
         COUNT(*) as activations
-      FROM activation_codes 
+      FROM activation_codes
       WHERE used_at >= CURRENT_DATE - INTERVAL '30 days'
         AND used_at IS NOT NULL
       GROUP BY DATE(used_at)
@@ -40,7 +40,7 @@ export async function GET() {
 
     // 获取过期情况统计
     const expiryResult = await query(`
-      SELECT 
+      SELECT
         COUNT(CASE WHEN expires_at IS NULL THEN 1 END) as never_expire,
         COUNT(CASE WHEN expires_at > CURRENT_TIMESTAMP THEN 1 END) as valid,
         COUNT(CASE WHEN expires_at <= CURRENT_TIMESTAMP THEN 1 END) as expired
@@ -49,7 +49,7 @@ export async function GET() {
 
     // 获取最近创建的激活码统计
     const recentResult = await query(`
-      SELECT 
+      SELECT
         COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as today,
         COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as this_week,
         COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as this_month
@@ -58,10 +58,10 @@ export async function GET() {
 
     // 获取每小时激活统计（今天）
     const hourlyResult = await query(`
-      SELECT 
+      SELECT
         EXTRACT(HOUR FROM used_at) as hour,
         COUNT(*) as activations
-      FROM activation_codes 
+      FROM activation_codes
       WHERE DATE(used_at) = CURRENT_DATE
         AND used_at IS NOT NULL
       GROUP BY EXTRACT(HOUR FROM used_at)

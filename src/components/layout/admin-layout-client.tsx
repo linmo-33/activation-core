@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/auth-context";
 import {
   LayoutDashboard,
   Key,
@@ -14,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  Smartphone,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -37,6 +39,11 @@ const navigation = [
     icon: Plus,
   },
   {
+    name: "设备管理",
+    href: "/admin/devices",
+    icon: Smartphone,
+  },
+  {
     name: "系统设置",
     href: "/admin/settings",
     icon: Settings,
@@ -46,21 +53,10 @@ const navigation = [
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
+  const { user, isLoading, logout } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch("/api/admin/login", {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        router.push("/admin/login");
-        router.refresh();
-      }
-    } catch (error) {
-      console.error("登出失败:", error);
-    }
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -83,9 +79,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex h-full flex-col">
           {/* Logo 区域 */}
           <div className="flex h-16 items-center justify-between px-6 border-b">
-            <Link href="/admin" className="flex items-center space-x-2">
-              <Key className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold">激活码管理</span>
+            <Link href="/admin" className="flex items-center space-x-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
+                <Key className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div>
+                <span className="text-lg font-bold text-foreground">
+                  CodeKey
+                </span>
+                <div className="text-xs text-muted-foreground">管理后台</div>
+              </div>
             </Link>
             <Button
               variant="ghost"
@@ -123,20 +126,38 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* 底部用户信息 */}
           <div className="border-t p-4">
             <div className="flex items-center space-x-3 mb-3">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">A</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">管理员</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  admin@example.com
-                </p>
-              </div>
+              {isLoading || !user ? (
+                // 加载状态或错误状态
+                <>
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="h-4 bg-muted rounded animate-pulse mb-1"></div>
+                    <div className="h-3 bg-muted rounded animate-pulse w-2/3"></div>
+                  </div>
+                </>
+              ) : (
+                // 用户信息
+                <>
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                      {user.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {user.username}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ID: {user.id}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-muted-foreground"
+              className="w-full justify-start"
               onClick={handleLogout}
             >
               <LogOut className="h-4 w-4 mr-2" />

@@ -42,20 +42,36 @@ export function isValidActivationCodeFormat(code: string): boolean {
 }
 
 /**
- * 格式化日期时间
+ * 格式化日期时间为中国时间格式
  * @param date 日期对象或字符串
- * @returns 格式化后的日期时间字符串
+ * @returns 格式化后的中国时间字符串 (YYYY-MM-DD HH:mm:ss)
  */
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string | null): string | null {
+  if (!date) return null;
+
   const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+
   return d.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    hour12: false
   });
+}
+
+/**
+ * 格式化日期时间为 API 响应格式
+ * 统一返回中国时间格式，用于所有 API 响应
+ * @param date 日期对象或字符串
+ * @returns 中国时间格式字符串或 null
+ */
+export function formatDateTimeForAPI(date: Date | string | null): string | null {
+  return formatDateTime(date);
 }
 
 /**
@@ -112,3 +128,5 @@ export function getStatusColor(status: string, expiresAt?: Date | string | null)
   if (expiresAt && isExpired(expiresAt)) return 'text-red-600 bg-red-100';
   return 'text-green-600 bg-green-100';
 }
+
+

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AdminLayout } from "@/components/layout/admin-layout";
+import { AdminLayout } from "@/components/layout/admin-layout-client";
 import {
   Card,
   CardContent,
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
 import {
   Key,
   Users,
@@ -100,6 +99,7 @@ export default function AdminDashboard() {
       setIsLoading(false);
     }
   };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
                       <div className="text-right space-y-1">
                         <Badge variant="secondary">已使用</Badge>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(activation.used_at).toLocaleString("zh-CN")}
+                          {activation.used_at}
                         </p>
                       </div>
                     </div>

@@ -1,6 +1,9 @@
 -- 激活码管理系统数据库初始化脚本（简化版本）
 -- 在 Supabase 项目的 SQL 编辑器中执行此脚本
 
+-- 设置数据库时区为亚洲/上海时区
+SET timezone = 'Asia/Shanghai';
+
 -- 创建管理员用户表
 CREATE TABLE IF NOT EXISTS admin_users (
     id SERIAL PRIMARY KEY,
@@ -66,5 +69,8 @@ SELECT
     COUNT(CASE WHEN expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP THEN 1 END) as expired_codes
 FROM activation_codes;
 
--- 完成提示
-SELECT 'Database initialization completed successfully!' as message;
+-- 验证时区设置
+SELECT
+    'Database initialization completed successfully!' as message,
+    CURRENT_SETTING('timezone') as current_timezone,
+    CURRENT_TIMESTAMP as current_time;
