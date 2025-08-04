@@ -7,10 +7,11 @@ import { resetActivationCode } from '@/lib/db';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const codeId = parseInt(params.id);
+    const { id } = await params;
+    const codeId = parseInt(id);
 
     // 验证 ID 参数
     if (isNaN(codeId) || codeId < 1) {
