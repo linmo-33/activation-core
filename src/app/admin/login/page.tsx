@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Key, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 
-export default function LoginPage() {
+// 加载骨架组件
+function LoginPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            返回首页
+          </Link>
+        </div>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Key className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">管理员登录</CardTitle>
+            <CardDescription>
+              请输入您的管理员凭据以访问激活码管理系统
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="h-4 bg-muted animate-pulse rounded"></div>
+              <div className="h-10 bg-muted animate-pulse rounded"></div>
+              <div className="h-10 bg-muted animate-pulse rounded"></div>
+              <div className="h-10 bg-muted animate-pulse rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// 登录表单组件（使用 useSearchParams）
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/admin";
@@ -169,5 +208,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 主登录页面组件
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageSkeleton />}>
+      <LoginForm />
+    </Suspense>
   );
 }
