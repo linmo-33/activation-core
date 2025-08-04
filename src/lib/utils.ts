@@ -6,20 +6,56 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * 生成随机激活码
+ * 生成密码学安全的随机激活码
  * @param length 激活码长度 (默认20)
  * @returns 混合大小写字母和数字的激活码，如：U2m9Lw2cjOaV8WQDx3Hy
  */
 export function generateActivationCode(length: number = 20): string {
-  // 包含大写字母、小写字母和数字
+  // 优化的字符集：移除容易混淆的字符 (0,O,1,I,l,i)
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let result = '';
 
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // 使用密码学安全的随机数生成器
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    // 浏览器环境或支持 Web Crypto API 的环境
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+
+    return Array.from(array, byte => chars[byte % chars.length]).join('');
+  } else {
+    // Node.js 环境
+    const crypto = require('crypto');
+    const bytes = crypto.randomBytes(length);
+
+    return Array.from(bytes, (byte: number) => chars[byte % chars.length]).join('');
+  }
+}
+
+/**
+ * 批量生成唯一激活码（优化版本）
+ * @param count 生成数量
+ * @param length 激活码长度 (默认20)
+ * @param maxAttempts 最大重试次数 (默认1000)
+ * @returns 唯一激活码数组
+ */
+export function generateUniqueActivationCodes(
+  count: number,
+  length: number = 20,
+  maxAttempts: number = 1000
+): string[] {
+  const codes = new Set<string>();
+  let attempts = 0;
+
+  while (codes.size < count && attempts < maxAttempts) {
+    const code = generateActivationCode(length);
+    codes.add(code);
+    attempts++;
   }
 
-  return result;
+  if (codes.size < count) {
+    throw new Error(`无法生成 ${count} 个唯一激活码，请减少数量或增加长度`);
+  }
+
+  return Array.from(codes);
 }
 
 /**

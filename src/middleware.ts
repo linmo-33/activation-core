@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
 
-// 简单的 JWT 解码函数（仅用于中间件，不验证签名）
-function decodeJWT(token: string) {
+// 完整的 JWT 验证函数（包括签名验证）
+async function verifyJWT(token: string) {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
-    }
-
-    const payload = JSON.parse(atob(parts[1]));
-
-    // 检查过期时间
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-      throw new Error('Token expired');
-    }
-
+    const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload;
   } catch (error) {
     throw new Error('Invalid token');
@@ -36,10 +26,11 @@ const protectedPaths = [
 const protectedApiPaths = [
   '/api/admin/codes',
   '/api/admin/devices',
-  '/api/admin/stats'
+  '/api/admin/stats',
+  '/api/admin/settings'
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   console.log('中间件处理路径:', pathname);
@@ -80,8 +71,8 @@ export function middleware(request: NextRequest) {
   }
 
   try {
-    // 解码 JWT token（不验证签名，仅在中间件中使用）
-    const decoded = decodeJWT(token);
+    // 完整的 JWT 验证（包括签名验证）
+    const decoded = await verifyJWT(token);
 
     // 检查 token 是否包含必要信息
     if (!decoded.id || !decoded.username || decoded.role !== 'admin') {
@@ -104,6 +95,16 @@ export function middleware(request: NextRequest) {
         )
       : NextResponse.redirect(new URL('/admin/login', request.url));
 
+    // 清除当前的 token cookie
+    response.cookies.set('token', '', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/'
+    });
+
+    // 清除旧的 admin_token cookie（向后兼容）
     response.cookies.set('admin_token', '', {
       httpOnly: true,
       secure: false,

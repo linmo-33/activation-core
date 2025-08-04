@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getActivationCodes, createActivationCodes } from '@/lib/db';
-import { generateActivationCode, formatDateTimeForAPI } from '@/lib/utils';
+import { generateUniqueActivationCodes, formatDateTimeForAPI } from '@/lib/utils';
 
 // 使用工具函数生成激活码
 
@@ -123,36 +123,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 生成激活码
-    const codes = [];
-    const generatedCodes = new Set<string>(); // 确保不重复
-
-    for (let i = 0; i < quantity; i++) {
-      let code: string;
-      let attempts = 0;
-      
-      // 生成唯一的激活码（最多尝试100次）
-      do {
-        code = generateActivationCode();
-        attempts++;
-      } while (generatedCodes.has(code) && attempts < 100);
-      
-      if (attempts >= 100) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: '生成唯一激活码失败，请稍后重试' 
-          },
-          { status: 500 }
-        );
-      }
-      
-      generatedCodes.add(code);
-      codes.push({
-        code,
-        expires_at: expiresAt
-      });
+    // 生成激活码（优化版本）
+    let generatedCodeStrings: string[];
+    try {
+      generatedCodeStrings = generateUniqueActivationCodes(quantity);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: '生成唯一激活码失败，请减少生成数量或稍后重试'
+        },
+        { status: 500 }
+      );
     }
+
+    const codes = generatedCodeStrings.map(code => ({
+      code,
+      expires_at: expiresAt
+    }));
 
     // 保存到数据库
     const createdCodes = await createActivationCodes(codes);

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 
 /**
  * 修改管理员密码 API
@@ -9,8 +8,8 @@ import jwt from 'jsonwebtoken';
  */
 export async function POST(request: NextRequest) {
   try {
-    // 验证JWT token
-    const token = request.cookies.get('admin_token')?.value;
+    // 中间件已经验证了 JWT，我们需要从 token 中获取管理员 ID
+    const token = request.cookies.get('token')?.value;
     if (!token) {
       return NextResponse.json(
         { success: false, message: '未授权访问' },
@@ -18,13 +17,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 解码 token 获取管理员 ID（不需要验证签名，中间件已经验证过）
     let adminId: number;
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      adminId = decoded.id;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      adminId = payload.id;
     } catch (error) {
       return NextResponse.json(
-        { success: false, message: 'Token 无效' },
+        { success: false, message: 'Token 格式无效' },
         { status: 401 }
       );
     }

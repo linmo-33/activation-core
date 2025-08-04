@@ -23,7 +23,7 @@
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "jsonwebtoken": "^9.0.2",
+    "jose": "^5.10.0",
     "lucide-react": "^0.534.0",
     "next": "15.4.4",
     "pg": "^8.16.3",
@@ -37,7 +37,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/pg": "^8.15.5",
     "@types/react": "^19",

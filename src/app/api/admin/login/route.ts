@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { SignJWT, jwtVerify } from 'jose';
 import { getAdminByUsername } from '@/lib/db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
 const JWT_EXPIRES_IN = '24h';
 
 /**
@@ -76,15 +76,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 生成 JWT Token
-    const token = jwt.sign(
-      { 
-        id: admin.id, 
-        username: admin.username,
-        role: 'admin'
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const token = await new SignJWT({
+      id: admin.id,
+      username: admin.username,
+      role: 'admin'
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('24h')
+      .sign(JWT_SECRET);
 
     // 创建响应
     const response = NextResponse.json(
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 验证 JWT Token
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const { payload: decoded } = await jwtVerify(token, JWT_SECRET);
 
     return NextResponse.json(
       {
