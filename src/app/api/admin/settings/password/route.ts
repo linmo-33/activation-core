@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { formatDateTimeForAPI } from '@/lib/utils';
 
 /**
  * 修改管理员密码 API
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
         message: '密码修改成功',
         data: {
           username: admin.username,
-          updated_at: new Date().toISOString()
+          updated_at: formatDateTimeForAPI(new Date())
         }
       },
       { status: 200 }

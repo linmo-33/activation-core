@@ -43,13 +43,22 @@ export function decodeJWT(token: string): JWTPayload | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
+      console.error('JWT 格式错误: 不是3部分结构');
       return null;
     }
 
     const payload = JSON.parse(atob(parts[1]));
-    
+
+
+
     // 检查必要字段
     if (!payload.id || !payload.username || !payload.exp) {
+      console.error('JWT payload 缺少必要字段:', {
+        hasId: !!payload.id,
+        hasUsername: !!payload.username,
+        hasExp: !!payload.exp,
+        hasRole: !!payload.role
+      });
       return null;
     }
 
@@ -100,7 +109,7 @@ export function getCurrentUser(): UserInfo | null {
   return {
     id: payload.id,
     username: payload.username,
-    role: payload.role
+    role: payload.role || 'admin' // 默认为 admin，因为这是管理员系统
   };
 }
 

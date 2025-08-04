@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { formatDateTimeForAPI } from '@/lib/utils';
 
 /**
  * 清理过期激活码 API
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
         message: `成功清理 ${cleanedCount} 个过期激活码`,
         data: {
           cleaned: cleanedCount,
-          cleanup_time: new Date().toISOString(),
+          cleanup_time: formatDateTimeForAPI(new Date()),
           operation: 'delete_expired_unused_codes'
         }
       },

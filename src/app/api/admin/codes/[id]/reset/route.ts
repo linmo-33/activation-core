@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resetActivationCode } from '@/lib/db';
+import { formatDateTimeForAPI } from '@/lib/utils';
 
 /**
  * 重置激活码 API
@@ -34,7 +35,7 @@ export async function POST(
           message: '激活码重置成功',
           data: {
             id: codeId,
-            reset_at: new Date().toISOString()
+            reset_at: formatDateTimeForAPI(new Date())
           }
         },
         { status: 200 }

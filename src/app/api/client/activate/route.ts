@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     console.error('激活码验证API错误:', {
       error: error.message,
       stack: error.stack,
-      timestamp: new Date().toISOString()
+      timestamp: formatDateTimeForAPI(new Date())
     });
 
     // 避免泄露内部错误信息

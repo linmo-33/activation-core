@@ -213,7 +213,8 @@ export async function GET(request: NextRequest) {
         data: {
           user: {
             id: decoded.id,
-            username: decoded.username
+            username: decoded.username,
+            role: 'admin' // 硬编码，因为这是管理员系统
           }
         }
       },
