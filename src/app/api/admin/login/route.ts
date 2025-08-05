@@ -3,7 +3,12 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { getAdminByUsername } from '@/lib/db';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
+// 安全检查：确保 JWT_SECRET 已设置
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key') {
+  throw new Error('🔒 安全错误: JWT_SECRET 环境变量未设置或使用默认值，请设置强随机密钥');
+}
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 const JWT_EXPIRES_IN = '24h';
 
 /**
@@ -94,20 +99,21 @@ export async function POST(request: NextRequest) {
         data: {
           user: {
             id: admin.id,
-            username: admin.username
+            username: admin.username,
+            role: 'admin'
           },
-          token: token,
           expires_in: JWT_EXPIRES_IN
         }
       },
       { status: 200 }
     );
 
-    // 设置新的 HttpOnly Cookie
+    // 设置新的 HttpOnly Cookie - 根据环境动态配置安全属性
+    const isProduction = process.env.NODE_ENV === 'production';
     response.cookies.set('token', token, {
       httpOnly: true,
-      secure: false, // 开发环境设置为 false
-      sameSite: 'lax', // 改为 lax 以避免跨站问题
+      secure: isProduction, // 生产环境启用 HTTPS only
+      sameSite: isProduction ? 'strict' : 'lax', // 生产环境使用更严格的 SameSite
       maxAge: 24 * 60 * 60 * 1000, // 24小时
       path: '/'
     });
@@ -151,11 +157,12 @@ export async function DELETE() {
       { status: 200 }
     );
 
-    // 清除新的 token cookie
+    // 清除新的 token cookie - 使用与设置时相同的安全属性
+    const isProduction = process.env.NODE_ENV === 'production';
     response.cookies.set('token', '', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
       maxAge: 0,
       path: '/'
     });
@@ -163,8 +170,8 @@ export async function DELETE() {
     // 清除旧的 admin_token cookie（向后兼容）
     response.cookies.set('admin_token', '', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
       maxAge: 0,
       path: '/'
     });

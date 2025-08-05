@@ -165,6 +165,27 @@ export const RATE_LIMIT_CONFIGS = {
     maxRequests: 50,
     windowMs: 60 * 1000, // 1 分钟
     keyPrefix: 'activate_global'
+  } as RateLimitConfig,
+
+  // 验证 API 的 IP 限制
+  VERIFY_IP: {
+    maxRequests: process.env.NODE_ENV === 'development' ? 10 : 30, // 开发环境 10 次，生产环境 30 次
+    windowMs: process.env.NODE_ENV === 'development' ? 60 * 1000 : 60 * 1000, // 1 分钟
+    keyPrefix: 'verify_ip'
+  } as RateLimitConfig,
+
+  // 验证 API 的设备 ID 限制
+  VERIFY_DEVICE: {
+    maxRequests: process.env.NODE_ENV === 'development' ? 5 : 20, // 开发环境 5 次，生产环境 20 次
+    windowMs: process.env.NODE_ENV === 'development' ? 60 * 1000 : 60 * 1000, // 1 分钟
+    keyPrefix: 'verify_device'
+  } as RateLimitConfig,
+
+  // 验证 API 的全局限制：每分钟最多 100 次请求
+  VERIFY_GLOBAL: {
+    maxRequests: 100,
+    windowMs: 60 * 1000, // 1 分钟
+    keyPrefix: 'verify_global'
   } as RateLimitConfig
 };
 

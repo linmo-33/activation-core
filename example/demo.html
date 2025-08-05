@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户端激活验证演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #666;
+        }
+        input[type="text"], input[type="url"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        .device-id {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        .log-entry.info { color: #17a2b8; }
+        .log-entry.success { color: #28a745; }
+        .log-entry.error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 客户端激活验证演示</h1>
+        
+        <!-- 配置区域 -->
+        <div class="section">
+            <h3>⚙️ API 配置</h3>
+            <div class="form-group">
+                <label for="apiUrl">API 地址:</label>
+                <input type="url" id="apiUrl" value="http://localhost:3000" placeholder="https://your-domain.com">
+            </div>
+            <div class="form-group">
+                <label for="apiKey">API 密钥:</label>
+                <input type="text" id="apiKey" value="your-client-api-key" placeholder="输入客户端API密钥">
+            </div>
+        </div>
+
+        <!-- 设备ID区域 -->
+        <div class="section">
+            <h3>📱 设备标识</h3>
+            <button onclick="generateDeviceId()">生成设备ID</button>
+            <button onclick="showDeviceInfo()">显示设备信息</button>
+            <div id="deviceIdDisplay" class="device-id" style="display: none;"></div>
+            <div id="deviceInfo" style="display: none; margin-top: 10px;"></div>
+        </div>
+
+        <!-- 激活区域 -->
+        <div class="section">
+            <h3>🔑 设备激活</h3>
+            <div class="form-group">
+                <label for="activationCode">激活码:</label>
+                <input type="text" id="activationCode" placeholder="输入20位激活码">
+            </div>
+            <button onclick="activateDevice()" id="activateBtn">激活设备</button>
+            <button onclick="checkActivationStatus()">检查激活状态</button>
+            <div id="activationStatus"></div>
+        </div>
+
+        <!-- 验证区域 -->
+        <div class="section">
+            <h3>✅ 状态验证</h3>
+            <button onclick="verifyActivation()">验证激活状态</button>
+            <button onclick="startPeriodicVerification()" id="periodicBtn">开始定期验证</button>
+            <button onclick="stopPeriodicVerification()" id="stopBtn" style="display: none;">停止验证</button>
+            <div id="verificationStatus"></div>
+        </div>
+
+        <!-- 日志区域 -->
+        <div class="section">
+            <h3>📋 操作日志</h3>
+            <button onclick="clearLog()">清空日志</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script src="device-id.js"></script>
+    <script src="activation-client.js"></script>
+    <script>
+        let currentDeviceId = null;
+        let verificationInterval = null;
+
+        // 生成设备ID
+        function generateDeviceId() {
+            try {
+                currentDeviceId = DeviceIdGenerator.generate();
+                document.getElementById('deviceIdDisplay').textContent = currentDeviceId;
+                document.getElementById('deviceIdDisplay').style.display = 'block';
+                logMessage('success', `设备ID生成成功: ${currentDeviceId}`);
+            } catch (error) {
+                logMessage('error', `设备ID生成失败: ${error.message}`);
+            }
+        }
+
+        // 显示设备信息
+        function showDeviceInfo() {
+            const info = DeviceIdGenerator.getDeviceInfo();
+            const infoDiv = document.getElementById('deviceInfo');
+            infoDiv.innerHTML = `
+                <h4>设备信息:</h4>
+                <p><strong>用户代理:</strong> ${info.userAgent}</p>
+                <p><strong>平台:</strong> ${info.platform}</p>
+                <p><strong>语言:</strong> ${info.language}</p>
+                <p><strong>屏幕分辨率:</strong> ${info.screenResolution}</p>
+                <p><strong>时区:</strong> ${info.timezone}</p>
+                <p><strong>硬件并发:</strong> ${info.hardwareConcurrency}</p>
+            `;
+            infoDiv.style.display = 'block';
+            logMessage('info', '设备信息已显示');
+        }
+
+        // 激活设备
+        async function activateDevice() {
+            if (!currentDeviceId) {
+                alert('请先生成设备ID');
+                return;
+            }
+
+            const activationCode = document.getElementById('activationCode').value.trim();
+            if (!activationCode) {
+                alert('请输入激活码');
+                return;
+            }
+
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+
+            const btn = document.getElementById('activateBtn');
+            btn.disabled = true;
+            btn.textContent = '激活中...';
+
+            try {
+                logMessage('info', `开始激活设备: ${currentDeviceId}`);
+                const client = new ActivationClient(apiUrl, apiKey);
+                const result = await client.activate(currentDeviceId, activationCode);
+
+                const statusDiv = document.getElementById('activationStatus');
+                if (result.success) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            <strong>✅ 激活成功!</strong><br>
+                            激活时间: ${result.data.activated_at}<br>
+                            ${result.data.expires_at ? `过期时间: ${result.data.expires_at}` : '永久激活'}
+                        </div>
+                    `;
+                    logMessage('success', `设备激活成功: ${result.message}`);
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="status error">
+                            <strong>❌ 激活失败</strong><br>
+                            ${result.message}
+                        </div>
+                    `;
+                    logMessage('error', `设备激活失败: ${result.message}`);
+                }
+            } catch (error) {
+                document.getElementById('activationStatus').innerHTML = `
+                    <div class="status error">
+                        <strong>❌ 激活异常</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+                logMessage('error', `激活异常: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '激活设备';
+            }
+        }
+
+        // 检查激活状态
+        function checkActivationStatus() {
+            if (!currentDeviceId) {
+                alert('请先生成设备ID');
+                return;
+            }
+
+            const isActivated = ActivationClient.isActivatedLocally(currentDeviceId);
+            const statusDiv = document.getElementById('activationStatus');
+            
+            if (isActivated) {
+                const status = ActivationClient.getLocalActivationStatus(currentDeviceId);
+                statusDiv.innerHTML = `
+                    <div class="status info">
+                        <strong>ℹ️ 本地激活状态</strong><br>
+                        状态: 已激活<br>
+                        保存时间: ${status.savedAt}
+                    </div>
+                `;
+                logMessage('info', '本地激活状态: 已激活');
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="status error">
+                        <strong>❌ 本地激活状态</strong><br>
+                        状态: 未激活
+                    </div>
+                `;
+                logMessage('info', '本地激活状态: 未激活');
+            }
+        }
+
+        // 验证激活状态
+        async function verifyActivation() {
+            if (!currentDeviceId) {
+                alert('请先生成设备ID');
+                return;
+            }
+
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+
+            try {
+                logMessage('info', `开始验证设备激活状态: ${currentDeviceId}`);
+                const client = new ActivationClient(apiUrl, apiKey);
+                const result = await client.verify(currentDeviceId);
+
+                const statusDiv = document.getElementById('verificationStatus');
+                if (result.success) {
+                    if (result.data.is_activated) {
+                        statusDiv.innerHTML = `
+                            <div class="status success">
+                                <strong>✅ 验证成功 - 设备已激活</strong><br>
+                                验证时间: ${result.data.verified_at}<br>
+                                ${result.data.activation_info ? `
+                                    激活时间: ${result.data.activation_info.activated_at}<br>
+                                    ${result.data.activation_info.is_permanent ? '永久激活' : `过期时间: ${result.data.activation_info.expires_at}`}
+                                ` : ''}
+                            </div>
+                        `;
+                        logMessage('success', '验证成功: 设备已激活');
+                    } else {
+                        statusDiv.innerHTML = `
+                            <div class="status error">
+                                <strong>❌ 验证成功 - 设备未激活</strong><br>
+                                ${result.data.expired_activations ? '存在过期的激活记录' : ''}
+                            </div>
+                        `;
+                        logMessage('error', '验证结果: 设备未激活或已过期');
+                    }
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="status error">
+                            <strong>❌ 验证失败</strong><br>
+                            ${result.message}
+                        </div>
+                    `;
+                    logMessage('error', `验证失败: ${result.message}`);
+                }
+            } catch (error) {
+                document.getElementById('verificationStatus').innerHTML = `
+                    <div class="status error">
+                        <strong>❌ 验证异常</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+                logMessage('error', `验证异常: ${error.message}`);
+            }
+        }
+
+        // 开始定期验证
+        function startPeriodicVerification() {
+            if (verificationInterval) {
+                clearInterval(verificationInterval);
+            }
+
+            document.getElementById('periodicBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-block';
+
+            logMessage('info', '开始定期验证 (每30秒一次)');
+            
+            verificationInterval = setInterval(async () => {
+                await verifyActivation();
+            }, 30000);
+        }
+
+        // 停止定期验证
+        function stopPeriodicVerification() {
+            if (verificationInterval) {
+                clearInterval(verificationInterval);
+                verificationInterval = null;
+            }
+
+            document.getElementById('periodicBtn').style.display = 'inline-block';
+            document.getElementById('stopBtn').style.display = 'none';
+
+            logMessage('info', '定期验证已停止');
+        }
+
+        // 记录日志
+        function logMessage(type, message) {
+            const log = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 清空日志
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // 页面加载完成后自动生成设备ID
+        window.onload = function() {
+            generateDeviceId();
+            logMessage('info', '演示页面加载完成');
+        };
+    </script>
+</body>
+</html>

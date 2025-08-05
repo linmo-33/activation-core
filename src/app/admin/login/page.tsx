@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Key, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 // 加载骨架组件
 function LoginPageSkeleton() {
@@ -58,6 +59,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/admin";
+  const { login } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,10 +86,11 @@ function LoginForm() {
       const result = await response.json();
 
       if (result.success) {
-        // 登录成功，跳转到目标页面
-        // 注意：不需要手动更新认证状态，AuthProvider 会自动检测 cookie 变化
+        // 登录成功，更新认证状态
+        login(result.data.user);
+        // 跳转到目标页面
         router.push(redirectTo);
-        router.refresh(); // 刷新页面以更新认证状态
+        router.refresh(); 
       } else {
         setError(result.message || "登录失败");
       }

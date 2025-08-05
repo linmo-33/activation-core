@@ -54,17 +54,28 @@ export async function query(text: string, params?: any[]) {
     return result;
   } catch (error: any) {
     const duration = Date.now() - start;
-    console.error('数据库查询错误:', {
-      text,
-      params,
-      duration,
-      error: {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        hint: error.hint
-      }
-    });
+
+    // 安全日志：在生产环境中不记录敏感的查询信息
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      console.error('数据库查询错误:', {
+        duration,
+        errorCode: error.code,
+        errorMessage: error.message
+      });
+    } else {
+      console.error('数据库查询错误:', {
+        text,
+        params,
+        duration,
+        error: {
+          message: error.message,
+          code: error.code,
+          detail: error.detail,
+          hint: error.hint
+        }
+      });
+    }
 
     // 根据错误类型提供更友好的错误信息
     if (error.code === '23505') {

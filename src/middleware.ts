@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
+// 安全检查：确保 JWT_SECRET 已设置
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key') {
+  throw new Error('🔒 安全错误: JWT_SECRET 环境变量未设置或使用默认值，请设置强随机密钥');
+}
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 // 完整的 JWT 验证函数（包括签名验证）
 async function verifyJWT(token: string) {
@@ -83,9 +88,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
 
   } catch (error) {
-    console.error('JWT 验证失败:', error);
-    console.error('Token:', token);
-    console.error('JWT_SECRET exists:', !!JWT_SECRET);
+    // 安全日志：不记录敏感信息
+    console.error('JWT 验证失败:', error instanceof Error ? error.message : 'Unknown error');
     
     // 清除无效的 token
     const response = isProtectedApiPath 
@@ -95,11 +99,12 @@ export async function middleware(request: NextRequest) {
         )
       : NextResponse.redirect(new URL('/admin/login', request.url));
 
-    // 清除当前的 token cookie
+    // 清除当前的 token cookie - 使用与设置时相同的安全属性
+    const isProduction = process.env.NODE_ENV === 'production';
     response.cookies.set('token', '', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
       maxAge: 0,
       path: '/'
     });
@@ -107,8 +112,8 @@ export async function middleware(request: NextRequest) {
     // 清除旧的 admin_token cookie（向后兼容）
     response.cookies.set('admin_token', '', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
       maxAge: 0,
       path: '/'
     });
