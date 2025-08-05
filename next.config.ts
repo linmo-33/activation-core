@@ -48,6 +48,28 @@ const nextConfig: NextConfig = {
             value: 'Content-Type, Authorization'
           }
         ]
+      },
+      {
+        // 客户端 API 的 CORS 配置
+        source: '/api/client/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*' // 允许所有域名访问客户端API
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, X-API-Key, User-Agent'
+          },
+          {
+            key: 'Access-Control-Max-Age',
+            value: '86400' // 预检请求缓存24小时
+          }
+        ]
       }
     ];
   }
