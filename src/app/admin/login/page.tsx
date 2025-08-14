@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Key, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { Key, Eye, EyeOff, ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
 // 加载骨架组件
@@ -88,9 +88,11 @@ function LoginForm() {
       if (result.success) {
         // 登录成功，更新认证状态
         login(result.data.user);
-        // 跳转到目标页面
-        router.push(redirectTo);
-        router.refresh(); 
+        // 等待 cookie 完全设置后再跳转
+        setTimeout(() => {
+          router.push(redirectTo);
+          router.refresh();
+        }, 100);
       } else {
         setError(result.message || "登录失败");
       }
@@ -126,17 +128,33 @@ function LoginForm() {
 
         <Card>
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Key className="h-6 w-6 text-primary" />
+            <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-all duration-300 ${isLoading ? 'bg-primary/20 scale-110' : ''}`}>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              ) : (
+                <Key className="h-6 w-6 text-primary" />
+              )}
             </div>
-            <CardTitle className="text-2xl">管理员登录</CardTitle>
-            <CardDescription>
-              请输入您的管理员凭据以访问激活码管理系统
+            <CardTitle className={`text-2xl transition-all duration-300 ${isLoading ? 'text-primary' : ''}`}>
+              管理员登录
+            </CardTitle>
+            <CardDescription className={`transition-all duration-300 ${isLoading ? 'text-primary/70' : ''}`}>
+              {isLoading ? '正在验证您的身份...' : '请输入您的管理员凭据以访问激活码管理系统'}
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="relative">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* 加载状态遮罩 */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">正在验证身份...</p>
+                  </div>
+                </div>
+              )}
+
               {/* 错误提示 */}
               {error && (
                 <div className="flex items-center space-x-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
@@ -146,7 +164,9 @@ function LoginForm() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="username">用户名</Label>
+                <Label htmlFor="username" className={isLoading ? "text-muted-foreground" : ""}>
+                  用户名
+                </Label>
                 <Input
                   id="username"
                   name="username"
@@ -156,11 +176,14 @@ function LoginForm() {
                   onChange={handleInputChange}
                   required
                   disabled={isLoading}
+                  className={isLoading ? "bg-muted/50" : ""}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">密码</Label>
+                <Label htmlFor="password" className={isLoading ? "text-muted-foreground" : ""}>
+                  密码
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -171,7 +194,7 @@ function LoginForm() {
                     onChange={handleInputChange}
                     required
                     disabled={isLoading}
-                    className="pr-10"
+                    className={isLoading ? "bg-muted/50 pr-10" : "pr-10"}
                   />
                   <Button
                     type="button"
@@ -190,8 +213,19 @@ function LoginForm() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "登录中..." : "登录"}
+              <Button 
+                type="submit" 
+                className="w-full relative overflow-hidden" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    登录中...
+                  </>
+                ) : (
+                  "登录"
+                )}
               </Button>
             </form>
 
