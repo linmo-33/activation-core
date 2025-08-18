@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateActivationCode } from '@/lib/db';
 import { cleanActivationCode, isValidActivationCodeFormat, formatDateTimeForAPI } from '@/lib/utils';
 import { checkRateLimit, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
+import { createLicenseToken, generateNonce, getKeyInfo } from '@/lib/signing';
 
 /**
  * 处理预检请求
@@ -15,6 +16,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, User-Agent',
       'Access-Control-Max-Age': '86400',
+      'X-Sign-Alg': getKeyInfo().alg,
     },
   });
 }
@@ -160,6 +162,20 @@ export async function POST(request: NextRequest) {
     if (result.success) {
       // 激活成功
       console.log(`✅ 激活成功: ${cleanCode} -> ${device_id} (IP: ${clientIP})`);
+      const nonce = generateNonce();
+      const ts = Date.now();
+      const algInfo = getKeyInfo();
+      const licenseClaims = {
+        route: '/api/client/activate',
+        device_id,
+        code: result.activationCode?.code,
+        is_activated: true,
+        activated_at: formatDateTimeForAPI(new Date()),
+        expires_at: formatDateTimeForAPI(result.activationCode?.expires_at || null),
+        nonce,
+        ts
+      };
+      const licenseToken = await createLicenseToken(licenseClaims);
       return NextResponse.json(
         {
           success: true,
@@ -168,14 +184,19 @@ export async function POST(request: NextRequest) {
             code: result.activationCode?.code,
             device_id: device_id,
             activated_at: formatDateTimeForAPI(new Date()),
-            expires_at: formatDateTimeForAPI(result.activationCode?.expires_at || null)
+            expires_at: formatDateTimeForAPI(result.activationCode?.expires_at || null),
+            license_token: licenseToken,
+            nonce,
+            ts,
+            alg: algInfo.alg
           }
         },
         {
           status: 200,
           headers: {
             'X-RateLimit-IP-Remaining': ipRateLimit.remaining.toString(),
-            'X-RateLimit-Device-Remaining': deviceRateLimit.remaining.toString()
+            'X-RateLimit-Device-Remaining': deviceRateLimit.remaining.toString(),
+            'X-License-Alg': algInfo.alg
           }
         }
       );

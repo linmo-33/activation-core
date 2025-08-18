@@ -1,419 +1,1610 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>客户端激活验证演示</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>激活码管理系统 - 客户端演示</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOCIgZmlsbD0iIzAwN2NiYSIvPgo8cGF0aCBkPSJNMTYgOEMxMi42ODYgOCAxMCAxMC42ODYgMTAgMTRWMThIMTJWMTRDMTIgMTEuNzkxIDEzLjc5MSAxMCAxNiAxMEMxOC4yMDkgMTAgMjAgMTEuNzkxIDIwIDE0VjE4SDIyVjE0QzIyIDEwLjY4NiAxOS4zMTQgOCAxNiA4WiIgZmlsbD0id2hpdGUiLz4KPHJlY3QgeD0iOCIgeT0iMTYiIHdpZHRoPSIxNiIgaGVpZ2h0PSI4IiByeD0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyMCIgcj0iMiIgZmlsbD0iIzAwN2NiYSIvPgo8L3N2Zz4K"
+    />
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-card: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --border-color: #e2e8f0;
+        --accent-color: #3b82f6;
+        --accent-hover: #2563eb;
+        --success-color: #10b981;
+        --success-bg: #d1fae5;
+        --error-color: #ef4444;
+        --error-bg: #fee2e2;
+        --warning-color: #f59e0b;
+        --warning-bg: #fef3c7;
+        --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+          0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --radius: 8px;
+        --radius-lg: 12px;
+      }
+
+      [data-theme="dark"] {
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-card: #1e293b;
+        --text-primary: #f1f5f9;
+        --text-secondary: #cbd5e1;
+        --text-muted: #64748b;
+        --border-color: #334155;
+        --accent-color: #3b82f6;
+        --accent-hover: #60a5fa;
+        --success-color: #10b981;
+        --success-bg: #064e3b;
+        --error-color: #ef4444;
+        --error-bg: #7f1d1d;
+        --warning-color: #f59e0b;
+        --warning-bg: #78350f;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          system-ui, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, var(--accent-color), #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .header p {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-width: 120px;
+        justify-content: center;
+        box-shadow: var(--shadow);
+      }
+
+      .status-badge.connected {
+        background: var(--success-bg);
+        color: var(--success-color);
+        border: 1px solid var(--success-color);
+        animation: connectedPulse 2s infinite;
+      }
+
+      .status-badge.disconnected {
+        background: var(--error-bg);
+        color: var(--error-color);
+        border: 1px solid var(--error-color);
+      }
+
+      .status-badge.connecting {
+        background: var(--warning-bg);
+        color: var(--warning-color);
+        border: 1px solid var(--warning-color);
+      }
+
+      .status-badge.unknown {
+        background: var(--bg-secondary);
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+      }
+
+      .status-indicator {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 4px;
+      }
+
+      .status-indicator.connected {
+        background: var(--success-color);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      }
+
+      .status-indicator.disconnected {
+        background: var(--error-color);
+        animation: disconnectedBlink 1.5s infinite;
+      }
+
+      .status-indicator.connecting {
+        background: var(--warning-color);
+        animation: connectingRotate 1s linear infinite;
+      }
+
+      .status-indicator.unknown {
+        background: var(--text-muted);
+      }
+
+      .status-indicator::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: white;
+        opacity: 0.8;
+      }
+
+      .status-text {
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .connection-details {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 12px;
+        box-shadow: var(--shadow-lg);
+        z-index: 100;
+        white-space: nowrap;
+        font-size: 0.75rem;
+        margin-top: 8px;
+      }
+
+      .status-badge:hover .connection-details {
+        display: block;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+      }
+
+      .card-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+      }
+
+      .card-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .card-title .icon {
+        font-size: 1.5rem;
+      }
+
+      .card-description {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+
+      .card-content {
+        padding: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+      }
+
+      .input,
+      .textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .input:focus,
+      .textarea:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .textarea {
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        font-size: 12px;
+        resize: vertical;
+        min-height: 120px;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .checkbox {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-color);
+      }
+
+      .checkbox-label {
+        margin: 0;
+        font-weight: normal;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: none;
+        border-radius: var(--radius);
+        background: var(--accent-color);
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .button:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .button:disabled {
+        background: var(--text-muted);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .button.secondary {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      }
+
+      .button.secondary:hover:not(:disabled) {
+        background: var(--border-color);
+      }
+
+      .button.success {
+        background: var(--success-color);
+      }
+
+      .button.danger {
+        background: var(--error-color);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .device-id-display {
+        background: var(--bg-secondary);
+        padding: 16px;
+        border-radius: var(--radius);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        word-break: break-all;
+        border: 1px solid var(--border-color);
+        margin: 16px 0;
+      }
+
+      .status-card {
+        padding: 16px;
+        border-radius: var(--radius);
+        margin: 16px 0;
+        border-left: 4px solid;
+      }
+
+      .status-card.success {
+        background: var(--success-bg);
+        border-color: var(--success-color);
+        color: var(--success-color);
+      }
+
+      .status-card.error {
+        background: var(--error-bg);
+        border-color: var(--error-color);
+        color: var(--error-color);
+      }
+
+      .status-card.warning {
+        background: var(--warning-bg);
+        border-color: var(--warning-color);
+        color: var(--warning-color);
+      }
+
+      .status-card.info {
+        background: var(--bg-secondary);
+        border-color: var(--accent-color);
+        color: var(--text-primary);
+      }
+
+      .status-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-content {
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+
+      .log-container {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        margin-top: 16px;
+      }
+
+      .log-entry {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        gap: 12px;
+      }
+
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+
+      .log-time {
+        color: var(--text-muted);
+        flex-shrink: 0;
+        min-width: 80px;
+      }
+
+      .log-message {
+        flex: 1;
+      }
+
+      .log-entry.success .log-message {
+        color: var(--success-color);
+      }
+
+      .log-entry.error .log-message {
+        color: var(--error-color);
+      }
+
+      .log-entry.info .log-message {
+        color: var(--accent-color);
+      }
+
+      .help-text {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: var(--border-color);
+        border-radius: 2px;
+        overflow: hidden;
+        margin: 16px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: var(--accent-color);
+        transition: width 0.3s ease;
+      }
+
+      .device-info {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-top: 16px;
+      }
+
+      .device-info h4 {
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      .device-info-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 16px;
+        font-size: 0.875rem;
+      }
+
+      .device-info-label {
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .device-info-value {
+        color: var(--text-primary);
+        word-break: break-all;
+      }
+
+      .floating-action {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        z-index: 99;
+      }
+
+      .floating-action:hover {
+        transform: scale(1.1);
+        background: var(--accent-hover);
+      }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: var(--shadow-lg);
+        max-width: 400px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+      }
+
+      .toast.show {
+        transform: translateX(0);
+      }
+
+      @media (max-width: 768px) {
         .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          padding: 12px;
         }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
+
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
         }
-        .section {
-            margin-bottom: 30px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fafafa;
+
+        .header h1 {
+          font-size: 2rem;
         }
-        .section h3 {
-            margin-top: 0;
-            color: #555;
+
+        .button-group {
+          flex-direction: column;
         }
-        .form-group {
-            margin-bottom: 15px;
+
+        .button {
+          justify-content: center;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #666;
+
+        .theme-toggle {
+          top: 12px;
+          right: 12px;
+          width: 40px;
+          height: 40px;
         }
-        input[type="text"], input[type="url"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            box-sizing: border-box;
+
+        .floating-action {
+          bottom: 16px;
+          right: 16px;
+          width: 48px;
+          height: 48px;
+          font-size: 20px;
         }
-        button {
-            background-color: #007cba;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 10px;
+      }
+
+      .fade-in {
+        animation: fadeIn 0.5s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
         }
-        button:hover {
-            background-color: #005a87;
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+      }
+
+      .pulse {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
         }
-        .success {
-            color: #28a745;
-            font-weight: bold;
+        50% {
+          opacity: 0.5;
         }
-        .error {
-            color: #dc3545;
-            font-weight: bold;
+      }
+
+      .spin {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
         }
-        .info {
-            color: #17a2b8;
+        to {
+          transform: rotate(360deg);
         }
-        .device-id {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            word-break: break-all;
-            margin: 10px 0;
+      }
+
+      @keyframes connectedPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
         }
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
+        70% {
+          box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
         }
-        .status.success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+        100% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
         }
-        .status.error {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
+      }
+
+      @keyframes disconnectedBlink {
+        0%,
+        100% {
+          opacity: 1;
         }
-        .status.info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
+        50% {
+          opacity: 0.5;
         }
-        .log {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
-            margin-top: 15px;
+      }
+
+      @keyframes connectingRotate {
+        from {
+          transform: rotate(0deg);
         }
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 2px 0;
+        to {
+          transform: rotate(360deg);
         }
-        .log-entry.info { color: #17a2b8; }
-        .log-entry.success { color: #28a745; }
-        .log-entry.error { color: #dc3545; }
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🔐 客户端激活验证演示</h1>
-        
-        <!-- 配置区域 -->
-        <div class="section">
-            <h3>⚙️ API 配置</h3>
-            <div class="form-group">
-                <label for="apiUrl">API 地址:</label>
-                <input type="url" id="apiUrl" value="http://localhost:3000" placeholder="https://your-domain.com">
-            </div>
-            <div class="form-group">
-                <label for="apiKey">API 密钥:</label>
-                <input type="text" id="apiKey" value="your-client-api-key" placeholder="输入客户端API密钥">
-            </div>
-        </div>
-
-        <!-- 设备ID区域 -->
-        <div class="section">
-            <h3>📱 设备标识</h3>
-            <button onclick="generateDeviceId()">生成设备ID</button>
-            <button onclick="showDeviceInfo()">显示设备信息</button>
-            <div id="deviceIdDisplay" class="device-id" style="display: none;"></div>
-            <div id="deviceInfo" style="display: none; margin-top: 10px;"></div>
-        </div>
-
-        <!-- 激活区域 -->
-        <div class="section">
-            <h3>🔑 设备激活</h3>
-            <div class="form-group">
-                <label for="activationCode">激活码:</label>
-                <input type="text" id="activationCode" placeholder="输入20位激活码">
-            </div>
-            <button onclick="activateDevice()" id="activateBtn">激活设备</button>
-            <button onclick="checkActivationStatus()">检查激活状态</button>
-            <div id="activationStatus"></div>
-        </div>
-
-        <!-- 验证区域 -->
-        <div class="section">
-            <h3>✅ 状态验证</h3>
-            <button onclick="verifyActivation()">验证激活状态</button>
-            <button onclick="startPeriodicVerification()" id="periodicBtn">开始定期验证</button>
-            <button onclick="stopPeriodicVerification()" id="stopBtn" style="display: none;">停止验证</button>
-            <div id="verificationStatus"></div>
-        </div>
-
-        <!-- 日志区域 -->
-        <div class="section">
-            <h3>📋 操作日志</h3>
-            <button onclick="clearLog()">清空日志</button>
-            <div id="log" class="log"></div>
-        </div>
+  </head>
+  <body>
+    <div class="theme-toggle" onclick="toggleTheme()">
+      <span id="themeIcon">🌙</span>
     </div>
+
+    <div class="container">
+      <div class="header fade-in">
+        <h1>🔐 激活码管理系统</h1>
+        <p>客户端演示 - 支持ES256响应签名验证</p>
+        <div id="connectionStatus" class="status-badge unknown">
+          <span class="status-indicator unknown"></span>
+          <span class="status-text">未知状态</span>
+          <span class="connection-details">
+            <strong>状态:</strong> 等待测试连接<br />
+            <strong>建议:</strong> 点击"测试连接"按钮
+          </span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- API 配置卡片 -->
+        <div class="card fade-in">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">⚙️</span>
+              API 配置
+            </div>
+            <div class="card-description">配置服务端连接和安全设置</div>
+          </div>
+          <div class="card-content">
+            <div class="form-group">
+              <label for="apiUrl">服务端地址</label>
+              <input
+                type="url"
+                id="apiUrl"
+                class="input"
+                value="http://localhost:3000"
+                placeholder="https://your-domain.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="apiKey">API 密钥</label>
+              <input
+                type="password"
+                id="apiKey"
+                class="input"
+                value="your-client-api-key"
+                placeholder="输入客户端API密钥"
+              />
+              <div class="help-text">用于客户端API认证的密钥</div>
+            </div>
+
+            <div class="form-group">
+              <div class="checkbox-group">
+                <input
+                  type="checkbox"
+                  id="enableSigVerify"
+                  class="checkbox"
+                  checked
+                />
+                <label for="enableSigVerify" class="checkbox-label">
+                  🔒 启用响应签名验证（防抓包篡改）
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group" id="publicKeyGroup">
+              <label for="publicKey">ES256 公钥 (PEM格式)</label>
+              <textarea
+                id="publicKey"
+                class="textarea"
+                placeholder="-----BEGIN PUBLIC KEY-----&#10;MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...&#10;-----END PUBLIC KEY-----"
+              ></textarea>
+              <div class="help-text">
+                请粘贴服务端对应的 ES256 公钥用于验证响应签名
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button class="button secondary" onclick="testConnection()">
+                <span id="testIcon">🔌</span> 测试连接
+              </button>
+              <button
+                class="button secondary"
+                onclick="testSignatureVerification()"
+              >
+                🔐 测试签名
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 设备管理卡片 -->
+        <div class="card fade-in">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">📱</span>
+              设备管理
+            </div>
+            <div class="card-description">生成和管理设备标识</div>
+          </div>
+          <div class="card-content">
+            <div class="button-group">
+              <button class="button" onclick="generateDeviceId()">
+                🎲 生成设备ID
+              </button>
+              <button class="button secondary" onclick="showDeviceInfo()">
+                ℹ️ 设备信息
+              </button>
+              <button class="button secondary" onclick="copyDeviceId()">
+                📋 复制ID
+              </button>
+            </div>
+
+            <div
+              id="deviceIdDisplay"
+              class="device-id-display"
+              style="display: none"
+            ></div>
+            <div
+              id="deviceInfo"
+              class="device-info"
+              style="display: none"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- 设备激活卡片 -->
+        <div class="card fade-in">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">🔑</span>
+              设备激活
+            </div>
+            <div class="card-description">输入激活码激活设备</div>
+          </div>
+          <div class="card-content">
+            <div class="form-group">
+              <label for="activationCode">激活码</label>
+              <input
+                type="text"
+                id="activationCode"
+                class="input"
+                placeholder="输入20位激活码"
+                maxlength="20"
+              />
+              <div class="help-text">
+                支持大小写混合，自动去除空格和特殊字符
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button
+                class="button success"
+                onclick="activateDevice()"
+                id="activateBtn"
+              >
+                🚀 激活设备
+              </button>
+              <button
+                class="button secondary"
+                onclick="checkActivationStatus()"
+              >
+                📊 本地状态
+              </button>
+            </div>
+
+            <div id="activationStatus"></div>
+          </div>
+        </div>
+
+        <!-- 状态验证卡片 -->
+        <div class="card fade-in">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">✅</span>
+              状态验证
+            </div>
+            <div class="card-description">验证设备激活状态</div>
+          </div>
+          <div class="card-content">
+            <div class="button-group">
+              <button class="button" onclick="verifyActivation()">
+                🔍 验证状态
+              </button>
+              <button
+                class="button secondary"
+                onclick="startPeriodicVerification()"
+                id="periodicBtn"
+              >
+                ⏰ 定期验证
+              </button>
+              <button
+                class="button danger"
+                onclick="stopPeriodicVerification()"
+                id="stopBtn"
+                style="display: none"
+              >
+                ⏹️ 停止验证
+              </button>
+            </div>
+
+            <div id="verificationStatus"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 日志卡片 -->
+      <div class="card fade-in">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="icon">📋</span>
+            操作日志
+          </div>
+          <div class="card-description">实时查看操作和调试信息</div>
+        </div>
+        <div class="card-content">
+          <div class="button-group">
+            <button class="button secondary" onclick="clearLog()">
+              🗑️ 清空日志
+            </button>
+            <button class="button secondary" onclick="exportLog()">
+              📥 导出日志
+            </button>
+          </div>
+
+          <div id="log" class="log-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="floating-action" onclick="scrollToTop()" title="返回顶部">
+      ↑
+    </button>
 
     <script src="device-id.js"></script>
     <script src="activation-client.js"></script>
     <script>
-        let currentDeviceId = null;
-        let verificationInterval = null;
+      let currentDeviceId = null;
+      let verificationInterval = null;
 
-        // 生成设备ID
-        function generateDeviceId() {
-            try {
-                currentDeviceId = DeviceIdGenerator.generate();
-                document.getElementById('deviceIdDisplay').textContent = currentDeviceId;
-                document.getElementById('deviceIdDisplay').style.display = 'block';
-                logMessage('success', `设备ID生成成功: ${currentDeviceId}`);
-            } catch (error) {
-                logMessage('error', `设备ID生成失败: ${error.message}`);
-            }
-        }
+      // 创建客户端实例
+      function createClient() {
+        const apiUrl = document.getElementById("apiUrl").value;
+        const apiKey = document.getElementById("apiKey").value;
+        const enableSigVerify =
+          document.getElementById("enableSigVerify").checked;
+        const publicKey = document.getElementById("publicKey").value.trim();
 
-        // 显示设备信息
-        function showDeviceInfo() {
-            const info = DeviceIdGenerator.getDeviceInfo();
-            const infoDiv = document.getElementById('deviceInfo');
-            infoDiv.innerHTML = `
-                <h4>设备信息:</h4>
-                <p><strong>用户代理:</strong> ${info.userAgent}</p>
-                <p><strong>平台:</strong> ${info.platform}</p>
-                <p><strong>语言:</strong> ${info.language}</p>
-                <p><strong>屏幕分辨率:</strong> ${info.screenResolution}</p>
-                <p><strong>时区:</strong> ${info.timezone}</p>
-                <p><strong>硬件并发:</strong> ${info.hardwareConcurrency}</p>
-            `;
-            infoDiv.style.display = 'block';
-            logMessage('info', '设备信息已显示');
-        }
-
-        // 激活设备
-        async function activateDevice() {
-            if (!currentDeviceId) {
-                alert('请先生成设备ID');
-                return;
-            }
-
-            const activationCode = document.getElementById('activationCode').value.trim();
-            if (!activationCode) {
-                alert('请输入激活码');
-                return;
-            }
-
-            const apiUrl = document.getElementById('apiUrl').value;
-            const apiKey = document.getElementById('apiKey').value;
-
-            const btn = document.getElementById('activateBtn');
-            btn.disabled = true;
-            btn.textContent = '激活中...';
-
-            try {
-                logMessage('info', `开始激活设备: ${currentDeviceId}`);
-                const client = new ActivationClient(apiUrl, apiKey);
-                const result = await client.activate(currentDeviceId, activationCode);
-
-                const statusDiv = document.getElementById('activationStatus');
-                if (result.success) {
-                    statusDiv.innerHTML = `
-                        <div class="status success">
-                            <strong>✅ 激活成功!</strong><br>
-                            激活时间: ${result.data.activated_at}<br>
-                            ${result.data.expires_at ? `过期时间: ${result.data.expires_at}` : '永久激活'}
-                        </div>
-                    `;
-                    logMessage('success', `设备激活成功: ${result.message}`);
-                } else {
-                    statusDiv.innerHTML = `
-                        <div class="status error">
-                            <strong>❌ 激活失败</strong><br>
-                            ${result.message}
-                        </div>
-                    `;
-                    logMessage('error', `设备激活失败: ${result.message}`);
-                }
-            } catch (error) {
-                document.getElementById('activationStatus').innerHTML = `
-                    <div class="status error">
-                        <strong>❌ 激活异常</strong><br>
-                        ${error.message}
-                    </div>
-                `;
-                logMessage('error', `激活异常: ${error.message}`);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '激活设备';
-            }
-        }
-
-        // 检查激活状态
-        function checkActivationStatus() {
-            if (!currentDeviceId) {
-                alert('请先生成设备ID');
-                return;
-            }
-
-            const isActivated = ActivationClient.isActivatedLocally(currentDeviceId);
-            const statusDiv = document.getElementById('activationStatus');
-            
-            if (isActivated) {
-                const status = ActivationClient.getLocalActivationStatus(currentDeviceId);
-                statusDiv.innerHTML = `
-                    <div class="status info">
-                        <strong>ℹ️ 本地激活状态</strong><br>
-                        状态: 已激活<br>
-                        保存时间: ${status.savedAt}
-                    </div>
-                `;
-                logMessage('info', '本地激活状态: 已激活');
-            } else {
-                statusDiv.innerHTML = `
-                    <div class="status error">
-                        <strong>❌ 本地激活状态</strong><br>
-                        状态: 未激活
-                    </div>
-                `;
-                logMessage('info', '本地激活状态: 未激活');
-            }
-        }
-
-        // 验证激活状态
-        async function verifyActivation() {
-            if (!currentDeviceId) {
-                alert('请先生成设备ID');
-                return;
-            }
-
-            const apiUrl = document.getElementById('apiUrl').value;
-            const apiKey = document.getElementById('apiKey').value;
-
-            try {
-                logMessage('info', `开始验证设备激活状态: ${currentDeviceId}`);
-                const client = new ActivationClient(apiUrl, apiKey);
-                const result = await client.verify(currentDeviceId);
-
-                const statusDiv = document.getElementById('verificationStatus');
-                if (result.success) {
-                    if (result.data.is_activated) {
-                        statusDiv.innerHTML = `
-                            <div class="status success">
-                                <strong>✅ 验证成功 - 设备已激活</strong><br>
-                                验证时间: ${result.data.verified_at}<br>
-                                ${result.data.activation_info ? `
-                                    激活时间: ${result.data.activation_info.activated_at}<br>
-                                    ${result.data.activation_info.is_permanent ? '永久激活' : `过期时间: ${result.data.activation_info.expires_at}`}
-                                ` : ''}
-                            </div>
-                        `;
-                        logMessage('success', '验证成功: 设备已激活');
-                    } else {
-                        statusDiv.innerHTML = `
-                            <div class="status error">
-                                <strong>❌ 验证成功 - 设备未激活</strong><br>
-                                ${result.data.expired_activations ? '存在过期的激活记录' : ''}
-                            </div>
-                        `;
-                        logMessage('error', '验证结果: 设备未激活或已过期');
-                    }
-                } else {
-                    statusDiv.innerHTML = `
-                        <div class="status error">
-                            <strong>❌ 验证失败</strong><br>
-                            ${result.message}
-                        </div>
-                    `;
-                    logMessage('error', `验证失败: ${result.message}`);
-                }
-            } catch (error) {
-                document.getElementById('verificationStatus').innerHTML = `
-                    <div class="status error">
-                        <strong>❌ 验证异常</strong><br>
-                        ${error.message}
-                    </div>
-                `;
-                logMessage('error', `验证异常: ${error.message}`);
-            }
-        }
-
-        // 开始定期验证
-        function startPeriodicVerification() {
-            if (verificationInterval) {
-                clearInterval(verificationInterval);
-            }
-
-            document.getElementById('periodicBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'inline-block';
-
-            logMessage('info', '开始定期验证 (每30秒一次)');
-            
-            verificationInterval = setInterval(async () => {
-                await verifyActivation();
-            }, 30000);
-        }
-
-        // 停止定期验证
-        function stopPeriodicVerification() {
-            if (verificationInterval) {
-                clearInterval(verificationInterval);
-                verificationInterval = null;
-            }
-
-            document.getElementById('periodicBtn').style.display = 'inline-block';
-            document.getElementById('stopBtn').style.display = 'none';
-
-            logMessage('info', '定期验证已停止');
-        }
-
-        // 记录日志
-        function logMessage(type, message) {
-            const log = document.getElementById('log');
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.textContent = `[${timestamp}] ${message}`;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
-        }
-
-        // 清空日志
-        function clearLog() {
-            document.getElementById('log').innerHTML = '';
-        }
-
-        // 页面加载完成后自动生成设备ID
-        window.onload = function() {
-            generateDeviceId();
-            logMessage('info', '演示页面加载完成');
+        const options = {
+          enableSignatureVerification: enableSigVerify,
+          publicKeyPem: publicKey || null,
+          timeout: 30000,
+          maxClockSkew: 90000,
         };
+
+        return new ActivationClient(apiUrl, apiKey, options);
+      }
+
+      // 测试连接
+      async function testConnection() {
+        const testIcon = document.getElementById("testIcon");
+        const connectionStatus = document.getElementById("connectionStatus");
+
+        testIcon.textContent = "⏳";
+        testIcon.classList.add("spin");
+        updateConnectionStatus("connecting", "连接中...", {
+          apiUrl: document.getElementById("apiUrl").value,
+          testing: true,
+        });
+
+        try {
+          const apiUrl = document.getElementById("apiUrl").value;
+          const startTime = Date.now();
+
+          const response = await fetch(`${apiUrl}/api/client/verify`, {
+            method: "OPTIONS",
+          });
+
+          const responseTime = Date.now() - startTime;
+
+          if (response.ok) {
+            updateConnectionStatus("connected", "已连接", {
+              apiUrl: document.getElementById("apiUrl").value,
+              responseTime: responseTime,
+              lastChecked: new Date().toLocaleTimeString(),
+            });
+            logMessage("success", "服务端连接测试成功");
+            showToast(`连接测试成功！响应时间: ${responseTime}ms`, "success");
+          } else {
+            throw new Error(`HTTP ${response.status}`);
+          }
+        } catch (error) {
+          updateConnectionStatus("disconnected", "连接失败", {
+            apiUrl: document.getElementById("apiUrl").value,
+            error: error.message,
+            lastChecked: new Date().toLocaleTimeString(),
+          });
+          logMessage("error", `连接测试失败: ${error.message}`);
+          showToast("连接测试失败，请检查服务端地址", "error");
+        } finally {
+          testIcon.textContent = "🔌";
+          testIcon.classList.remove("spin");
+        }
+      }
+
+      // 更新连接状态
+      function updateConnectionStatus(status, text, details = {}) {
+        const connectionStatus = document.getElementById("connectionStatus");
+        connectionStatus.className = `status-badge ${status}`;
+
+        let detailsHtml = "";
+        if (details.testing) {
+          detailsHtml = `
+                  <strong>服务端地址:</strong> ${details.apiUrl}<br>
+                  <strong>状态:</strong> 正在测试连接...
+              `;
+        } else if (status === "connected") {
+          detailsHtml = `
+                  <strong>服务端地址:</strong> ${details.apiUrl}<br>
+                  <strong>响应时间:</strong> ${details.responseTime}ms<br>
+                  <strong>最后检查:</strong> ${details.lastChecked}
+              `;
+        } else if (status === "disconnected") {
+          detailsHtml = `
+                  <strong>服务端地址:</strong> ${details.apiUrl}<br>
+                  <strong>错误信息:</strong> ${details.error}<br>
+                  <strong>最后检查:</strong> ${details.lastChecked}
+              `;
+        } else {
+          detailsHtml = `
+                  <strong>状态:</strong> ${details.message || "未知状态"}<br>
+                  <strong>建议:</strong> ${
+                    details.suggestion || '点击"测试连接"按钮'
+                  }
+              `;
+        }
+
+        connectionStatus.innerHTML = `
+              <span class="status-indicator ${status}"></span>
+              <span class="status-text">${text}</span>
+              <span class="connection-details">${detailsHtml}</span>
+          `;
+      }
+
+      // 自动检测连接状态
+      async function autoCheckConnection() {
+        const apiUrl = document.getElementById("apiUrl").value;
+
+        if (!apiUrl || apiUrl === "http://localhost:3000") {
+          updateConnectionStatus("unknown", "未配置", {
+            message: "使用默认地址",
+            suggestion: "请配置正确的服务端地址",
+          });
+          return;
+        }
+
+        try {
+          const response = await fetch(`${apiUrl}/api/client/verify`, {
+            method: "OPTIONS",
+            signal: AbortSignal.timeout(5000), // 5秒超时
+          });
+
+          if (response.ok) {
+            updateConnectionStatus("connected", "自动连接", {
+              apiUrl: apiUrl,
+              responseTime: "N/A",
+              lastChecked: new Date().toLocaleTimeString(),
+            });
+          } else {
+            throw new Error(`HTTP ${response.status}`);
+          }
+        } catch (error) {
+          updateConnectionStatus("disconnected", "连接失败", {
+            apiUrl: apiUrl,
+            error: error.message,
+            lastChecked: new Date().toLocaleTimeString(),
+          });
+        }
+      }
+
+      // 复制设备ID
+      function copyDeviceId() {
+        if (!currentDeviceId) {
+          showToast("请先生成设备ID", "warning");
+          return;
+        }
+
+        navigator.clipboard
+          .writeText(currentDeviceId)
+          .then(() => {
+            showToast("设备ID已复制到剪贴板", "success");
+            logMessage("info", "设备ID已复制");
+          })
+          .catch(() => {
+            showToast("复制失败，请手动复制", "error");
+          });
+      }
+
+      // 生成设备ID
+      function generateDeviceId() {
+        try {
+          currentDeviceId = DeviceIdGenerator.generate();
+          document.getElementById("deviceIdDisplay").textContent =
+            currentDeviceId;
+          document.getElementById("deviceIdDisplay").style.display = "block";
+          logMessage("success", `设备ID生成成功: ${currentDeviceId}`);
+          showToast("设备ID生成成功", "success");
+        } catch (error) {
+          logMessage("error", `设备ID生成失败: ${error.message}`);
+          showToast("设备ID生成失败", "error");
+        }
+      }
+
+      // 显示设备信息
+      function showDeviceInfo() {
+        const info = DeviceIdGenerator.getDeviceInfo();
+        const infoDiv = document.getElementById("deviceInfo");
+
+        infoDiv.innerHTML = `
+                <h4>🖥️ 设备信息</h4>
+                <div class="device-info-grid">
+                    <span class="device-info-label">用户代理:</span>
+                    <span class="device-info-value">${info.userAgent}</span>
+                    <span class="device-info-label">语言:</span>
+                    <span class="device-info-value">${info.language}</span>
+                    <span class="device-info-label">屏幕分辨率:</span>
+                    <span class="device-info-value">${info.screenResolution}</span>
+                    <span class="device-info-label">时区:</span>
+                    <span class="device-info-value">${info.timezone}</span>
+                </div>
+            `;
+        infoDiv.style.display = "block";
+        logMessage("info", "设备信息已显示");
+      }
+
+      // 激活设备
+      async function activateDevice() {
+        if (!currentDeviceId) {
+          showToast("请先生成设备ID", "warning");
+          return;
+        }
+
+        const activationCode = document
+          .getElementById("activationCode")
+          .value.trim();
+        if (!activationCode) {
+          showToast("请输入激活码", "warning");
+          return;
+        }
+
+        const btn = document.getElementById("activateBtn");
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin">⏳</span> 激活中...';
+
+        try {
+          logMessage("info", `开始激活设备: ${currentDeviceId}`);
+          const client = createClient();
+          const result = await client.activate(currentDeviceId, activationCode);
+
+          const statusDiv = document.getElementById("activationStatus");
+          if (result.success) {
+            const sigStatus =
+              result.data && result.data.license_token
+                ? "🔒 已验签"
+                : "⚠️ 未验签";
+            statusDiv.innerHTML = `
+                        <div class="status-card success">
+                            <div class="status-title">
+                                <span>✅</span> 激活成功 ${sigStatus}
+                            </div>
+                            <div class="status-content">
+                                <strong>激活时间:</strong> ${
+                                  result.data.activated_at
+                                }<br>
+                                <strong>有效期:</strong> ${
+                                  result.data.expires_at
+                                    ? result.data.expires_at
+                                    : "永久激活"
+                                }<br>
+                                ${
+                                  result.data.license_token
+                                    ? "<small>✓ 响应签名验证通过</small>"
+                                    : "<small>⚠ 响应未包含签名</small>"
+                                }
+                            </div>
+                        </div>
+                    `;
+            logMessage("success", `设备激活成功: ${result.message}`);
+            showToast("设备激活成功！", "success");
+          } else {
+            statusDiv.innerHTML = `
+                        <div class="status-card error">
+                            <div class="status-title">
+                                <span>❌</span> 激活失败
+                            </div>
+                            <div class="status-content">
+                                ${result.message}
+                            </div>
+                        </div>
+                    `;
+            logMessage("error", `设备激活失败: ${result.message}`);
+            showToast("设备激活失败", "error");
+          }
+        } catch (error) {
+          document.getElementById("activationStatus").innerHTML = `
+                    <div class="status-card error">
+                        <div class="status-title">
+                            <span>❌</span> 激活异常
+                        </div>
+                        <div class="status-content">
+                            ${error.message}
+                        </div>
+                    </div>
+                `;
+          logMessage("error", `激活异常: ${error.message}`);
+          showToast("激活过程出现异常", "error");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+
+      // 检查激活状态
+      function checkActivationStatus() {
+        if (!currentDeviceId) {
+          showToast("请先生成设备ID", "warning");
+          return;
+        }
+
+        const isActivated =
+          ActivationClient.isActivatedLocally(currentDeviceId);
+        const statusDiv = document.getElementById("activationStatus");
+
+        if (isActivated) {
+          const status =
+            ActivationClient.getLocalActivationStatus(currentDeviceId);
+          statusDiv.innerHTML = `
+                    <div class="status-card info">
+                        <div class="status-title">
+                            <span>ℹ️</span> 本地激活状态
+                        </div>
+                        <div class="status-content">
+                            <strong>状态:</strong> 已激活<br>
+                            <strong>保存时间:</strong> ${status.savedAt}<br>
+                            <strong>签名验证:</strong> ${
+                              status.signatureVerified ? "✓ 已验证" : "⚠ 未验证"
+                            }
+                        </div>
+                    </div>
+                `;
+          logMessage("info", "本地激活状态: 已激活");
+        } else {
+          statusDiv.innerHTML = `
+                    <div class="status-card error">
+                        <div class="status-title">
+                            <span>❌</span> 本地激活状态
+                        </div>
+                        <div class="status-content">
+                            状态: 未激活
+                        </div>
+                    </div>
+                `;
+          logMessage("info", "本地激活状态: 未激活");
+        }
+      }
+
+      // 验证激活状态
+      async function verifyActivation() {
+        if (!currentDeviceId) {
+          showToast("请先生成设备ID", "warning");
+          return;
+        }
+
+        try {
+          logMessage("info", `开始验证设备激活状态: ${currentDeviceId}`);
+          const client = createClient();
+          const result = await client.verify(currentDeviceId);
+
+          const statusDiv = document.getElementById("verificationStatus");
+          if (result.success) {
+            if (result.data.is_activated) {
+              const sigStatus =
+                result.data && result.data.license_token
+                  ? "🔒 已验签"
+                  : "⚠️ 未验签";
+              statusDiv.innerHTML = `
+                            <div class="status-card success">
+                                <div class="status-title">
+                                    <span>✅</span> 验证成功 - 设备已激活 ${sigStatus}
+                                </div>
+                                <div class="status-content">
+                                    <strong>验证时间:</strong> ${
+                                      result.data.verified_at
+                                    }<br>
+                                    ${
+                                      result.data.activation_info
+                                        ? `
+                                        <strong>激活时间:</strong> ${
+                                          result.data.activation_info
+                                            .activated_at
+                                        }<br>
+                                        <strong>有效期:</strong> ${
+                                          result.data.activation_info
+                                            .is_permanent
+                                            ? "永久激活"
+                                            : result.data.activation_info
+                                                .expires_at
+                                        }
+                                    `
+                                        : ""
+                                    }<br>
+                                    ${
+                                      result.data.license_token
+                                        ? "<small>✓ 响应签名验证通过</small>"
+                                        : "<small>⚠ 响应未包含签名</small>"
+                                    }
+                                </div>
+                            </div>
+                        `;
+              logMessage("success", "验证成功: 设备已激活");
+            } else {
+              statusDiv.innerHTML = `
+                            <div class="status-card error">
+                                <div class="status-title">
+                                    <span>❌</span> 验证结果 - 设备未激活
+                                </div>
+                                <div class="status-content">
+                                    ${
+                                      result.data.expired_activations
+                                        ? "存在过期的激活记录<br>"
+                                        : ""
+                                    }
+                                    ${
+                                      result.data.signature_failed
+                                        ? "<small>⚠ 签名验证失败</small>"
+                                        : ""
+                                    }
+                                </div>
+                            </div>
+                        `;
+              logMessage("error", "验证结果: 设备未激活或已过期");
+            }
+          } else {
+            statusDiv.innerHTML = `
+                        <div class="status-card error">
+                            <div class="status-title">
+                                <span>❌</span> 验证失败
+                            </div>
+                            <div class="status-content">
+                                ${result.message}
+                            </div>
+                        </div>
+                    `;
+            logMessage("error", `验证失败: ${result.message}`);
+          }
+        } catch (error) {
+          document.getElementById("verificationStatus").innerHTML = `
+                    <div class="status-card error">
+                        <div class="status-title">
+                            <span>❌</span> 验证异常
+                        </div>
+                        <div class="status-content">
+                            ${error.message}
+                        </div>
+                    </div>
+                `;
+          logMessage("error", `验证异常: ${error.message}`);
+        }
+      }
+
+      // 开始定期验证
+      function startPeriodicVerification() {
+        if (verificationInterval) {
+          clearInterval(verificationInterval);
+        }
+
+        document.getElementById("periodicBtn").style.display = "none";
+        document.getElementById("stopBtn").style.display = "inline-flex";
+
+        logMessage("info", "开始定期验证 (每30秒一次)");
+        showToast("已开始定期验证", "info");
+
+        verificationInterval = setInterval(async () => {
+          await verifyActivation();
+        }, 30000);
+      }
+
+      // 停止定期验证
+      function stopPeriodicVerification() {
+        if (verificationInterval) {
+          clearInterval(verificationInterval);
+          verificationInterval = null;
+        }
+
+        document.getElementById("periodicBtn").style.display = "inline-flex";
+        document.getElementById("stopBtn").style.display = "none";
+
+        logMessage("info", "定期验证已停止");
+        showToast("定期验证已停止", "info");
+      }
+
+      // 测试签名验证功能
+      function testSignatureVerification() {
+        const enableSigVerify =
+          document.getElementById("enableSigVerify").checked;
+        const publicKey = document.getElementById("publicKey").value.trim();
+
+        if (!enableSigVerify) {
+          logMessage("info", "签名验证已禁用");
+          showToast("签名验证已禁用", "warning");
+          return;
+        }
+
+        if (!publicKey) {
+          logMessage("error", "请先配置ES256公钥");
+          showToast("请先配置ES256公钥", "error");
+          return;
+        }
+
+        try {
+          // 测试公钥格式
+          if (!publicKey.includes("-----BEGIN PUBLIC KEY-----")) {
+            throw new Error("公钥格式不正确，应包含 PEM 头尾");
+          }
+
+          logMessage("success", "公钥格式检查通过，签名验证功能已就绪");
+          logMessage("info", "注意：实际验证需要服务端返回有效的签名响应");
+          showToast("签名验证配置正确", "success");
+        } catch (error) {
+          logMessage("error", `公钥格式检查失败: ${error.message}`);
+          showToast("公钥格式检查失败", "error");
+        }
+      }
+
+      // 显示 Toast 通知
+      function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = "toast";
+
+        const colors = {
+          success: "var(--success-color)",
+          error: "var(--error-color)",
+          warning: "var(--warning-color)",
+          info: "var(--accent-color)",
+        };
+
+        toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: ${colors[type]}; font-size: 18px;">
+                        ${
+                          type === "success"
+                            ? "✅"
+                            : type === "error"
+                            ? "❌"
+                            : type === "warning"
+                            ? "⚠️"
+                            : "ℹ️"
+                        }
+                    </span>
+                    <span>${message}</span>
+                </div>
+            `;
+
+        document.body.appendChild(toast);
+
+        // 显示动画
+        setTimeout(() => toast.classList.add("show"), 100);
+
+        // 自动隐藏
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
+      }
+
+      // 记录日志
+      function logMessage(type, message) {
+        const log = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement("div");
+        entry.className = `log-entry ${type}`;
+        entry.innerHTML = `
+                <span class="log-time">[${timestamp}]</span>
+                <span class="log-message">${message}</span>
+            `;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      // 清空日志
+      function clearLog() {
+        document.getElementById("log").innerHTML = "";
+        showToast("日志已清空", "info");
+      }
+
+      // 导出日志
+      function exportLog() {
+        const logContent = Array.from(document.querySelectorAll(".log-entry"))
+          .map((entry) => entry.textContent)
+          .join("\n");
+
+        if (!logContent) {
+          showToast("暂无日志内容", "warning");
+          return;
+        }
+
+        const blob = new Blob([logContent], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `activation_client_log_${new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace(/:/g, "-")}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        logMessage("info", "日志已导出");
+      }
+
+      // 滚动到顶部
+      function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      // 切换主题
+      function toggleTheme() {
+        const body = document.body;
+        const themeIcon = document.getElementById("themeIcon");
+        const currentTheme = body.getAttribute("data-theme");
+
+        if (currentTheme === "dark") {
+          body.setAttribute("data-theme", "light");
+          themeIcon.textContent = "🌙";
+          localStorage.setItem("theme", "light");
+        } else {
+          body.setAttribute("data-theme", "dark");
+          themeIcon.textContent = "☀️";
+          localStorage.setItem("theme", "dark");
+        }
+      }
+
+      // 初始化主题
+      function initTheme() {
+        const savedTheme = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
+        const theme = savedTheme || (prefersDark ? "dark" : "light");
+
+        document.body.setAttribute("data-theme", theme);
+        document.getElementById("themeIcon").textContent =
+          theme === "dark" ? "☀️" : "🌙";
+      }
+
+      // 控制公钥输入框显示
+      document
+        .getElementById("enableSigVerify")
+        .addEventListener("change", function () {
+          const publicKeyGroup = document.getElementById("publicKeyGroup");
+          publicKeyGroup.style.display = this.checked ? "block" : "none";
+        });
+
+      // 激活码输入自动格式化
+      document
+        .getElementById("activationCode")
+        .addEventListener("input", function () {
+          // 移除非字母数字字符，保持原有大小写
+          this.value = this.value.replace(/[^a-zA-Z0-9]/g, "");
+        });
+
+      // 页面加载完成后初始化
+      window.onload = function () {
+        initTheme();
+        generateDeviceId();
+        logMessage("info", "🚀 演示页面加载完成");
+        logMessage("info", "✨ 新版本支持ES256响应签名验证，防止抓包篡改");
+
+        // 添加淡入动画
+        document.querySelectorAll(".fade-in").forEach((el, index) => {
+          el.style.animationDelay = `${index * 0.1}s`;
+        });
+
+        // 延迟自动检测连接状态
+        setTimeout(() => {
+          autoCheckConnection();
+        }, 1000);
+      };
+
+      // API URL 变化时自动重新检测
+      document.getElementById("apiUrl").addEventListener("blur", function () {
+        setTimeout(() => {
+          autoCheckConnection();
+        }, 500);
+      });
+
+      document.getElementById("apiUrl").addEventListener("input", function () {
+        // URL输入时显示未知状态
+        updateConnectionStatus("unknown", "待检测", {
+          message: "输入中...",
+          suggestion: "完成输入后将自动检测",
+        });
+      });
     </script>
-</body>
+  </body>
 </html>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkDeviceActivationStatus } from '@/lib/db';
 import { formatDateTimeForAPI } from '@/lib/utils';
 import { checkRateLimit, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
+import { createLicenseToken, generateNonce, getKeyInfo } from '@/lib/signing';
 
 /**
  * 处理预检请求
@@ -15,6 +16,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, User-Agent',
       'Access-Control-Max-Age': '86400',
+      'X-Sign-Alg': getKeyInfo().alg,
     },
   });
 }
@@ -162,6 +164,25 @@ export async function POST(request: NextRequest) {
       };
 
       console.log(`✅ 设备验证成功: ${device_id} 激活状态有效 (IP: ${clientIP})`);
+
+      // 仅在激活有效时提供签名令牌
+      const nonce = generateNonce();
+      const ts = Date.now();
+      const algInfo = getKeyInfo();
+      const licenseClaims = {
+        route: '/api/client/verify',
+        device_id,
+        is_activated: true,
+        activated_at: responseData.activation_info.activated_at,
+        expires_at: responseData.activation_info.expires_at,
+        nonce,
+        ts
+      };
+      const licenseToken = await createLicenseToken(licenseClaims);
+      responseData.license_token = licenseToken;
+      responseData.nonce = nonce;
+      responseData.ts = ts;
+      responseData.alg = algInfo.alg;
     } else {
       // 设备未激活或激活已过期
       if (activationStatus.hasExpiredActivations) {

@@ -9,7 +9,8 @@
     "lint": "next lint",
     "deploy-check": "node scripts/deployment-check.js",
     "hash-password": "node scripts/hash-password.js",
-    "db-init": "echo 'Please run the SQL script in scripts/init-db.sql in your database'"
+    "db-init": "echo 'Please run the SQL script in scripts/init-db.sql in your database'",
+    "generate-keys": "node scripts/generate-keys.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
