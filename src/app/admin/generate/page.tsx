@@ -35,16 +35,29 @@ export default function GeneratePage() {
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedCode[]>([]);
   const [formData, setFormData] = useState({
     quantity: "10",
-    expiryType: "never", // never, days, date
+    expiryType: "never", // never, days, date, datetime
     expiryDays: "30",
     expiryDate: "",
+    expiryDateTime: "",
   });
 
   const handleInputChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
+      
+      // 当切换到datetime类型时，如果没有设置时间，则默认设置为明天00:00:00
+      if (name === "expiryType" && value === "datetime" && !prev.expiryDateTime) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        updated.expiryDateTime = tomorrow.toISOString().slice(0, 16);
+      }
+      
+      return updated;
+    });
   };
 
   // 使用工具函数生成激活码
@@ -61,6 +74,10 @@ export default function GeneratePage() {
 
     if (formData.expiryType === "date" && formData.expiryDate) {
       return new Date(formData.expiryDate + "T23:59:59");
+    }
+
+    if (formData.expiryType === "datetime" && formData.expiryDateTime) {
+      return new Date(formData.expiryDateTime);
     }
 
     return null;
@@ -97,6 +114,18 @@ export default function GeneratePage() {
 
       if (selectedDate <= today) {
         return "过期日期必须是未来的日期";
+      }
+    }
+
+    if (formData.expiryType === "datetime") {
+      if (!formData.expiryDateTime) {
+        return "请选择过期日期和时间";
+      }
+      const selectedDateTime = new Date(formData.expiryDateTime);
+      const now = new Date();
+
+      if (selectedDateTime <= now) {
+        return "过期时间必须是未来的时间";
       }
     }
 
@@ -246,7 +275,8 @@ export default function GeneratePage() {
                   <SelectContent>
                     <SelectItem value="never">永不过期</SelectItem>
                     <SelectItem value="days">指定天数后过期</SelectItem>
-                    <SelectItem value="date">指定日期过期</SelectItem>
+                    <SelectItem value="date">指定日期过期(23:59:59)</SelectItem>
+                    <SelectItem value="datetime">指定精确时间过期</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -269,14 +299,70 @@ export default function GeneratePage() {
                 )}
 
                 {formData.expiryType === "date" && (
-                  <Input
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) =>
-                      handleInputChange("expiryDate", e.target.value)
-                    }
-                    min={new Date().toISOString().split("T")[0]}
-                  />
+                  <div className="space-y-2">
+                    <Input
+                      type="date"
+                      value={formData.expiryDate}
+                      onChange={(e) =>
+                        handleInputChange("expiryDate", e.target.value)
+                      }
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      将在选择日期的 23:59:59 过期
+                    </p>
+                  </div>
+                )}
+
+                {formData.expiryType === "datetime" && (
+                  <div className="space-y-3">
+                    <Input
+                      type="datetime-local"
+                      value={formData.expiryDateTime}
+                      onChange={(e) =>
+                        handleInputChange("expiryDateTime", e.target.value)
+                      }
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                    
+                    {/* 时间快捷设置 */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (formData.expiryDateTime) {
+                            const date = formData.expiryDateTime.split('T')[0];
+                            handleInputChange("expiryDateTime", `${date}T00:00`);
+                          }
+                        }}
+                        disabled={!formData.expiryDateTime}
+                        className="text-xs"
+                      >
+                        00:00:00
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (formData.expiryDateTime) {
+                            const date = formData.expiryDateTime.split('T')[0];
+                            handleInputChange("expiryDateTime", `${date}T23:59`);
+                          }
+                        }}
+                        disabled={!formData.expiryDateTime}
+                        className="text-xs"
+                      >
+                        23:59:59
+                      </Button>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      支持精确设置过期时间，可使用按钮快速设置为当天开始或结束时间
+                    </p>
+                  </div>
                 )}
               </div>
 

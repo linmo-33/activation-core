@@ -79,6 +79,14 @@ export async function GET(request: NextRequest) {
 /**
  * 批量生成激活码 API
  * POST /api/admin/codes
+ * 
+ * 请求体参数：
+ * - quantity: 生成数量 (1-1000)
+ * - expires_at: 过期时间 (可选，支持时分秒)
+ *   格式示例：
+ *   - "2024-12-31 23:59:59"
+ *   - "2024-12-31T23:59:59"
+ *   - "2024-12-31T23:59:59.000Z"
  */
 export async function POST(request: NextRequest) {
   try {
@@ -105,18 +113,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             success: false, 
-            message: '过期时间格式无效' 
+            message: '过期时间格式无效，请使用标准日期时间格式（如：2024-12-31 23:59:59 或 2024-12-31T23:59:59）' 
           },
           { status: 400 }
         );
       }
       
-      // 检查过期时间不能是过去的时间
-      if (expiresAt <= new Date()) {
+      // 检查过期时间不能是过去的时间（精确到秒）
+      const now = new Date();
+      if (expiresAt <= now) {
         return NextResponse.json(
           { 
             success: false, 
-            message: '过期时间不能是过去的时间' 
+            message: `过期时间不能是过去的时间，当前时间：${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}` 
           },
           { status: 400 }
         );
