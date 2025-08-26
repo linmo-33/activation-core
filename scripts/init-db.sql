@@ -33,8 +33,12 @@ CREATE INDEX IF NOT EXISTS idx_activation_codes_device_id ON activation_codes(us
 CREATE INDEX IF NOT EXISTS idx_activation_codes_created_at ON activation_codes(created_at);
 
 -- 创建更新时间触发器函数
+-- 使用 SECURITY DEFINER 和安全的 search_path 防止 search_path 劫持攻击
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SECURITY DEFINER
+SET search_path = 'pg_catalog'
+AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
@@ -86,9 +90,10 @@ CREATE POLICY "Enable all operations for activation_codes" ON activation_codes
 -- 强制删除现有的统计视图（包括可能的 SECURITY DEFINER 属性）
 DROP VIEW IF EXISTS public.activation_codes_stats CASCADE;
 
--- 重新创建统计视图，明确不使用 SECURITY DEFINER（这是默认行为）
--- 注意：不指定 SECURITY DEFINER 或 SECURITY INVOKER 时，默认为 SECURITY INVOKER
-CREATE VIEW public.activation_codes_stats AS
+-- 重新创建统计视图，明确指定 SECURITY INVOKER（PostgreSQL 15+ 标准语法）
+-- 使用 WITH (security_invoker = true) 确保视图使用调用者权限，符合 Supabase 安全要求
+CREATE VIEW public.activation_codes_stats 
+WITH (security_invoker = true) AS
 SELECT
     COUNT(*) as total_codes,
     COUNT(CASE WHEN status = 'unused' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP) THEN 1 END) as unused_codes,
@@ -96,54 +101,4 @@ SELECT
     COUNT(CASE WHEN expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP THEN 1 END) as expired_codes
 FROM activation_codes;
 
--- ================================
--- 验证和完成信息
--- ================================
-
--- 验证 RLS 是否已启用
-SELECT
-    'RLS Status Check' as check_type,
-    schemaname,
-    tablename,
-    rowsecurity as rls_enabled
-FROM pg_tables
-WHERE schemaname = 'public'
-    AND tablename IN ('admin_users', 'activation_codes');
-
--- 验证策略是否已创建
-SELECT
-    'RLS Policies Check' as check_type,
-    schemaname,
-    tablename,
-    policyname
-FROM pg_policies
-WHERE schemaname = 'public'
-    AND tablename IN ('admin_users', 'activation_codes');
-
--- 验证视图是否正确创建且没有 SECURITY DEFINER 属性
-SELECT
-    'View Security Check' as check_type,
-    schemaname,
-    viewname,
-    viewowner,
-    definition
-FROM pg_views
-WHERE schemaname = 'public'
-    AND viewname = 'activation_codes_stats';
-
--- 测试统计视图功能
-SELECT
-    'Statistics View Test' as check_type,
-    total_codes,
-    unused_codes,
-    used_codes,
-    expired_codes
-FROM activation_codes_stats;
-
--- 验证时区设置和完成信息
-SELECT
-    'Database initialization completed successfully!' as message,
-    'All Supabase security issues have been resolved' as security_status,
-    'SECURITY DEFINER view issue fixed' as view_status,
-    CURRENT_SETTING('timezone') as current_timezone,
-    CURRENT_TIMESTAMP as current_time;
+-- 数据库初始化完成
