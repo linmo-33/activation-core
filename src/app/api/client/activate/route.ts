@@ -201,12 +201,32 @@ export async function POST(request: NextRequest) {
         }
       );
     } else {
-      // 激活失败 - 统一错误响应，避免信息泄露
+      // 激活失败 - 提供更详细的错误信息
       console.log(`❌ 激活失败: ${cleanCode} -> ${device_id} (IP: ${clientIP}) - ${result.message}`);
+
+      // 根据不同的错误类型返回不同的消息
+      let errorMessage = '激活失败';
+      let errorCode = 'ACTIVATION_FAILED';
+
+      if (result.message.includes('已有有效的激活码')) {
+        errorMessage = '该设备已激活，每个设备只能同时使用一个激活码';
+        errorCode = 'DEVICE_ALREADY_ACTIVATED';
+      } else if (result.message.includes('已被使用')) {
+        errorMessage = '激活码已被其他设备使用';
+        errorCode = 'CODE_ALREADY_USED';
+      } else if (result.message.includes('已过期')) {
+        errorMessage = '激活码已过期';
+        errorCode = 'CODE_EXPIRED';
+      } else if (result.message.includes('不存在')) {
+        errorMessage = '激活码不存在';
+        errorCode = 'CODE_NOT_FOUND';
+      }
+
       return NextResponse.json(
         {
           success: false,
-          message: '激活码无效或已被使用'
+          message: errorMessage,
+          error_code: errorCode
         },
         { status: 400 }
       );

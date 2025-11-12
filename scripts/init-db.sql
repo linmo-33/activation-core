@@ -21,9 +21,13 @@ CREATE TABLE IF NOT EXISTS activation_codes (
     expires_at TIMESTAMP WITH TIME ZONE NULL,
     used_at TIMESTAMP WITH TIME ZONE NULL,
     used_by_device_id VARCHAR(255) NULL,
+    validity_days INTEGER NULL,  -- 激活后的有效天数：NULL=使用expires_at，1=日卡，30=月卡
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 为 validity_days 字段添加注释
+COMMENT ON COLUMN activation_codes.validity_days IS '激活后的有效天数：NULL=使用expires_at绝对时间，1=日卡，30=月卡';
 
 -- 创建索引以提高查询性能
 CREATE INDEX IF NOT EXISTS idx_activation_codes_code ON activation_codes(code);
@@ -31,6 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_activation_codes_status ON activation_codes(statu
 CREATE INDEX IF NOT EXISTS idx_activation_codes_expires_at ON activation_codes(expires_at);
 CREATE INDEX IF NOT EXISTS idx_activation_codes_device_id ON activation_codes(used_by_device_id);
 CREATE INDEX IF NOT EXISTS idx_activation_codes_created_at ON activation_codes(created_at);
+CREATE INDEX IF NOT EXISTS idx_activation_codes_validity_days ON activation_codes(validity_days);
 
 -- 创建更新时间触发器函数
 -- 使用 SECURITY DEFINER 和安全的 search_path 防止 search_path 劫持攻击

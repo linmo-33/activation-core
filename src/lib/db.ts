@@ -4,11 +4,11 @@ import { Pool, PoolClient } from 'pg';
 const dbConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 5, 
-  min: 0, 
-  idleTimeoutMillis: 10000, 
-  connectionTimeoutMillis: 5000, 
-  acquireTimeoutMillis: 10000, 
+  max: 5,
+  min: 0,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+  acquireTimeoutMillis: 10000,
   options: '-c timezone=Asia/Shanghai',
 };
 
@@ -112,7 +112,7 @@ export async function transaction<T>(
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
   const client = await getClient();
-  
+
   try {
     await client.query('BEGIN');
     const result = await callback(client);
@@ -177,6 +177,7 @@ export interface ActivationCode {
   used_at: Date | null;
   used_by_device_id: string | null;
   created_at: Date;
+  validity_days: number | null; // 激活后的有效天数：NULL=使用expires_at，1=日卡，30=月卡
 }
 
 // 数据库操作函数
@@ -205,21 +206,21 @@ export async function getAdminByUsername(username: string): Promise<AdminUser | 
  * @returns 创建的激活码记录
  */
 export async function createActivationCodes(
-  codes: Array<{ code: string; expires_at?: Date | null }>
+  codes: Array<{ code: string; expires_at?: Date | null; validity_days?: number | null }>
 ): Promise<ActivationCode[]> {
-  const values = codes.map((_, index) => 
-    `($${index * 2 + 1}, $${index * 2 + 2})`
+  const values = codes.map((_, index) =>
+    `($${index * 3 + 1}, $${index * 3 + 2}, $${index * 3 + 3})`
   ).join(', ');
-  
-  const params = codes.flatMap(item => [item.code, item.expires_at]);
-  
+
+  const params = codes.flatMap(item => [item.code, item.expires_at, item.validity_days ?? null]);
+
   const result = await query(
-    `INSERT INTO activation_codes (code, expires_at) 
+    `INSERT INTO activation_codes (code, expires_at, validity_days) 
      VALUES ${values} 
      RETURNING *`,
     params
   );
-  
+
   return result.rows as ActivationCode[];
 }
 
@@ -237,45 +238,45 @@ export async function getActivationCodes(filters?: {
   let whereClause = '';
   let params: any[] = [];
   let paramIndex = 1;
-  
+
   if (filters?.status && filters.status !== 'all') {
     whereClause += ` WHERE status = $${paramIndex}`;
     params.push(filters.status);
     paramIndex++;
   }
-  
+
   if (filters?.search) {
     const searchClause = whereClause ? ' AND ' : ' WHERE ';
     whereClause += `${searchClause}(code ILIKE $${paramIndex} OR used_by_device_id ILIKE $${paramIndex})`;
     params.push(`%${filters.search}%`);
     paramIndex++;
   }
-  
+
   // 获取总数
   const countResult = await query(
     `SELECT COUNT(*) FROM activation_codes${whereClause}`,
     params
   );
   const total = parseInt(countResult.rows[0].count);
-  
+
   // 获取数据
   let limitClause = '';
   if (filters?.limit) {
     limitClause += ` LIMIT $${paramIndex}`;
     params.push(filters.limit);
     paramIndex++;
-    
+
     if (filters?.offset) {
       limitClause += ` OFFSET $${paramIndex}`;
       params.push(filters.offset);
     }
   }
-  
+
   const result = await query(
     `SELECT * FROM activation_codes${whereClause} ORDER BY created_at DESC${limitClause}`,
     params
   );
-  
+
   return {
     codes: result.rows as ActivationCode[],
     total
@@ -306,10 +307,13 @@ export async function validateActivationCode(
 
     if (deviceCheckResult.rows.length > 0) {
       const existingCode = deviceCheckResult.rows[0];
-      console.log(`🚫 设备重复激活检测: ${deviceId} 已使用有效激活码 ${existingCode.code}`);
+      const expiresInfo = existingCode.expires_at
+        ? `，有效期至 ${new Date(existingCode.expires_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`
+        : '，永久有效';
+      console.log(`🚫 设备重复激活检测: ${deviceId} 已使用有效激活码 ${existingCode.code}${expiresInfo}`);
       return {
         success: false,
-        message: '该设备已有有效的激活码，每个设备只能同时使用一个激活码'
+        message: `该设备已有有效的激活码，每个设备只能同时使用一个激活码`
       };
     }
 
@@ -320,6 +324,7 @@ export async function validateActivationCode(
     );
 
     if (result.rows.length === 0) {
+      console.log(`🚫 激活码不存在: ${code}`);
       return { success: false, message: '激活码不存在' };
     }
 
@@ -327,28 +332,46 @@ export async function validateActivationCode(
 
     // 3. 检查激活码状态
     if (activationCode.status === 'used') {
+      const usedInfo = activationCode.used_by_device_id
+        ? ` (设备: ${activationCode.used_by_device_id.substring(0, 8)}...)`
+        : '';
+      console.log(`🚫 激活码已被使用: ${code}${usedInfo}`);
       return { success: false, message: '激活码已被使用' };
     }
 
-    // 4. 检查过期时间
-    if (activationCode.expires_at && new Date(activationCode.expires_at) < new Date()) {
+    // 4. 检查过期时间（仅对绝对过期时间的激活码）
+    if (activationCode.validity_days === null && activationCode.expires_at && new Date(activationCode.expires_at) < new Date()) {
+      const expiredAt = new Date(activationCode.expires_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+      console.log(`🚫 激活码已过期: ${code}，过期时间: ${expiredAt}`);
       return { success: false, message: '激活码已过期' };
     }
 
-    // 5. 更新激活码状态
+    // 5. 计算过期时间（对于相对过期时间的激活码）
+    let calculatedExpiresAt = activationCode.expires_at;
+    if (activationCode.validity_days !== null) {
+      const now = new Date();
+      calculatedExpiresAt = new Date(now.getTime() + activationCode.validity_days * 24 * 60 * 60 * 1000);
+    }
+
+    // 6. 更新激活码状态
     await client.query(
       `UPDATE activation_codes
-       SET status = 'used', used_by_device_id = $1, used_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [deviceId, activationCode.id]
+       SET status = 'used', used_by_device_id = $1, used_at = CURRENT_TIMESTAMP, expires_at = $2
+       WHERE id = $3`,
+      [deviceId, calculatedExpiresAt, activationCode.id]
     );
 
-    console.log(`✅ 设备激活成功: ${deviceId} 使用激活码 ${code}`);
+    console.log(`✅ 设备激活成功: ${deviceId} 使用激活码 ${code}${activationCode.validity_days ? ` (${activationCode.validity_days}天有效期)` : ''}`);
 
     return {
       success: true,
       message: '激活成功',
-      activationCode: { ...activationCode, status: 'used' as const, used_by_device_id: deviceId }
+      activationCode: {
+        ...activationCode,
+        status: 'used' as const,
+        used_by_device_id: deviceId,
+        expires_at: calculatedExpiresAt
+      }
     };
   });
 }

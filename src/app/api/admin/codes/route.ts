@@ -11,7 +11,7 @@ import { generateUniqueActivationCodes, formatDateTimeForAPI } from '@/lib/utils
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     // 解析查询参数
     const status = searchParams.get('status') || 'all';
     const search = searchParams.get('search') || '';
@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
     // 验证参数
     if (page < 1 || limit < 1 || limit > 100) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: '分页参数无效' 
+        {
+          success: false,
+          message: '分页参数无效'
         },
         { status: 400 }
       );
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('获取激活码列表API错误:', error);
-    
+
     return NextResponse.json(
       {
         success: false,
@@ -92,14 +92,14 @@ export async function POST(request: NextRequest) {
   try {
     // 解析请求体
     const body = await request.json();
-    const { quantity, expires_at } = body;
+    const { quantity, expires_at, validity_days } = body;
 
     // 验证请求参数
     if (!quantity || quantity < 1 || quantity > 1000) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: '生成数量必须在1-1000之间' 
+        {
+          success: false,
+          message: '生成数量必须在1-1000之间'
         },
         { status: 400 }
       );
@@ -111,21 +111,21 @@ export async function POST(request: NextRequest) {
       expiresAt = new Date(expires_at);
       if (isNaN(expiresAt.getTime())) {
         return NextResponse.json(
-          { 
-            success: false, 
-            message: '过期时间格式无效，请使用标准日期时间格式（如：2024-12-31 23:59:59 或 2024-12-31T23:59:59）' 
+          {
+            success: false,
+            message: '过期时间格式无效，请使用标准日期时间格式（如：2024-12-31 23:59:59 或 2024-12-31T23:59:59）'
           },
           { status: 400 }
         );
       }
-      
+
       // 检查过期时间不能是过去的时间（精确到秒）
       const now = new Date();
       if (expiresAt <= now) {
         return NextResponse.json(
-          { 
-            success: false, 
-            message: `过期时间不能是过去的时间，当前时间：${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}` 
+          {
+            success: false,
+            message: `过期时间不能是过去的时间，当前时间：${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`
           },
           { status: 400 }
         );
@@ -148,7 +148,8 @@ export async function POST(request: NextRequest) {
 
     const codes = generatedCodeStrings.map(code => ({
       code,
-      expires_at: expiresAt
+      expires_at: expiresAt,
+      validity_days: validity_days ?? null
     }));
 
     // 保存到数据库
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('生成激活码API错误:', error);
-    
+
     return NextResponse.json(
       {
         success: false,

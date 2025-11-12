@@ -19,7 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, CheckCircle, Copy, AlertCircle } from "lucide-react";
+import { 
+  Plus, 
+  Clock, 
+  CheckCircle, 
+  Copy, 
+  AlertCircle,
+  Calendar,
+  CalendarDays,
+  Infinity,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface GeneratedCode {
@@ -35,9 +44,7 @@ export default function GeneratePage() {
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedCode[]>([]);
   const [formData, setFormData] = useState({
     quantity: "10",
-    expiryType: "never", // never, days, date, datetime
-    expiryDays: "30",
-    expiryDate: "",
+    expiryType: "never", // never, daily, monthly, custom
     expiryDateTime: "",
   });
 
@@ -48,11 +55,11 @@ export default function GeneratePage() {
         [name]: value,
       };
       
-      // 当切换到datetime类型时，如果没有设置时间，则默认设置为明天00:00:00
-      if (name === "expiryType" && value === "datetime" && !prev.expiryDateTime) {
+      // 当切换到自定义时间类型时，如果没有设置时间，则默认设置为明天23:59
+      if (name === "expiryType" && value === "custom" && !prev.expiryDateTime) {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
+        tomorrow.setHours(23, 59, 0, 0);
         updated.expiryDateTime = tomorrow.toISOString().slice(0, 16);
       }
       
@@ -62,25 +69,27 @@ export default function GeneratePage() {
 
   // 使用工具函数生成激活码
 
-  const calculateExpiryDate = (): Date | null => {
-    if (formData.expiryType === "never") return null;
-
-    if (formData.expiryType === "days") {
-      const days = parseInt(formData.expiryDays);
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + days);
-      return expiryDate;
+  const getExpiryConfig = (): { expires_at: Date | null; validity_days: number | null } => {
+    if (formData.expiryType === "never") {
+      return { expires_at: null, validity_days: null };
     }
 
-    if (formData.expiryType === "date" && formData.expiryDate) {
-      return new Date(formData.expiryDate + "T23:59:59");
+    if (formData.expiryType === "daily") {
+      // 日卡：激活后 1 天有效
+      return { expires_at: null, validity_days: 1 };
     }
 
-    if (formData.expiryType === "datetime" && formData.expiryDateTime) {
-      return new Date(formData.expiryDateTime);
+    if (formData.expiryType === "monthly") {
+      // 月卡：激活后 30 天有效
+      return { expires_at: null, validity_days: 30 };
     }
 
-    return null;
+    if (formData.expiryType === "custom" && formData.expiryDateTime) {
+      // 自定义：绝对过期时间
+      return { expires_at: new Date(formData.expiryDateTime), validity_days: null };
+    }
+
+    return { expires_at: null, validity_days: null };
   };
 
   const validateForm = (): string | null => {
@@ -94,30 +103,7 @@ export default function GeneratePage() {
       return "单次最多只能生成1000个激活码";
     }
 
-    if (formData.expiryType === "days") {
-      const days = parseInt(formData.expiryDays);
-      if (isNaN(days) || days < 1) {
-        return "过期天数必须是大于0的整数";
-      }
-      if (days > 3650) {
-        return "过期天数不能超过10年(3650天)";
-      }
-    }
-
-    if (formData.expiryType === "date") {
-      if (!formData.expiryDate) {
-        return "请选择过期日期";
-      }
-      const selectedDate = new Date(formData.expiryDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (selectedDate <= today) {
-        return "过期日期必须是未来的日期";
-      }
-    }
-
-    if (formData.expiryType === "datetime") {
+    if (formData.expiryType === "custom") {
       if (!formData.expiryDateTime) {
         return "请选择过期日期和时间";
       }
@@ -148,7 +134,7 @@ export default function GeneratePage() {
 
     try {
       const quantity = parseInt(formData.quantity);
-      const expiresAt = calculateExpiryDate();
+      const expiryConfig = getExpiryConfig();
 
       // 调用 API 生成激活码
       const response = await fetch("/api/admin/codes", {
@@ -158,7 +144,8 @@ export default function GeneratePage() {
         },
         body: JSON.stringify({
           quantity,
-          expires_at: expiresAt ? expiresAt.toISOString() : null,
+          expires_at: expiryConfig.expires_at ? expiryConfig.expires_at.toISOString() : null,
+          validity_days: expiryConfig.validity_days,
         }),
       });
 
@@ -261,7 +248,7 @@ export default function GeneratePage() {
 
               {/* 过期设置 */}
               <div className="space-y-4">
-                <Label>过期时间设置</Label>
+                <Label>有效期类型</Label>
 
                 <Select
                   value={formData.expiryType}
@@ -270,98 +257,186 @@ export default function GeneratePage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="选择过期类型" />
+                    <SelectValue placeholder="选择有效期类型" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="never">永不过期</SelectItem>
-                    <SelectItem value="days">指定天数后过期</SelectItem>
-                    <SelectItem value="date">指定日期过期(23:59:59)</SelectItem>
-                    <SelectItem value="datetime">指定精确时间过期</SelectItem>
+                    <SelectItem value="never">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-100">
+                          <Infinity className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium">永久</div>
+                          <div className="text-xs text-muted-foreground">永不过期</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="daily">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-green-100">
+                          <Calendar className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium">日卡</div>
+                          <div className="text-xs text-muted-foreground">激活后 24 小时有效</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="monthly">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-100">
+                          <CalendarDays className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium">月卡</div>
+                          <div className="text-xs text-muted-foreground">激活后 30 天有效</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="custom">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-orange-100">
+                          <Clock className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium">指定时间</div>
+                          <div className="text-xs text-muted-foreground">自定义过期时间</div>
+                        </div>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
-                {formData.expiryType === "days" && (
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      max="3650"
-                      value={formData.expiryDays}
-                      onChange={(e) =>
-                        handleInputChange("expiryDays", e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      天后过期
-                    </span>
-                  </div>
-                )}
-
-                {formData.expiryType === "date" && (
-                  <div className="space-y-2">
-                    <Input
-                      type="date"
-                      value={formData.expiryDate}
-                      onChange={(e) =>
-                        handleInputChange("expiryDate", e.target.value)
-                      }
-                      min={new Date().toISOString().split("T")[0]}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      将在选择日期的 23:59:59 过期
+                {/* 显示当前选择的说明 */}
+                {formData.expiryType === "never" && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm text-blue-900 dark:text-blue-100 flex items-start gap-2">
+                      <Infinity className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>激活码永久有效，不会过期</span>
                     </p>
                   </div>
                 )}
 
-                {formData.expiryType === "datetime" && (
-                  <div className="space-y-3">
-                    <Input
-                      type="datetime-local"
-                      value={formData.expiryDateTime}
-                      onChange={(e) =>
-                        handleInputChange("expiryDateTime", e.target.value)
-                      }
-                      min={new Date().toISOString().slice(0, 16)}
-                    />
-                    
-                    {/* 时间快捷设置 */}
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (formData.expiryDateTime) {
-                            const date = formData.expiryDateTime.split('T')[0];
-                            handleInputChange("expiryDateTime", `${date}T00:00`);
+                {formData.expiryType === "daily" && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-sm font-medium text-green-900 dark:text-green-100 flex items-start gap-2">
+                      <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>日卡：激活后 24 小时有效</span>
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-2 ml-6">
+                      • 生成后可随时激活，激活时刻开始计时<br/>
+                      • 例如：2024-01-15 10:30 激活 → 2024-01-16 10:30 过期
+                    </p>
+                  </div>
+                )}
+
+                {formData.expiryType === "monthly" && (
+                  <div className="p-3 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <p className="text-sm font-medium text-purple-900 dark:text-purple-100 flex items-start gap-2">
+                      <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>月卡：激活后 30 天有效</span>
+                    </p>
+                    <p className="text-xs text-purple-700 dark:text-purple-300 mt-2 ml-6">
+                      • 生成后可随时激活，激活时刻开始计时<br/>
+                      • 例如：2024-01-01 10:30 激活 → 2024-01-31 10:30 过期
+                    </p>
+                  </div>
+                )}
+
+                {formData.expiryType === "custom" && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="expiryDateTime" className="text-sm font-medium">
+                        选择过期时间
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="expiryDateTime"
+                          type="datetime-local"
+                          value={formData.expiryDateTime}
+                          onChange={(e) =>
+                            handleInputChange("expiryDateTime", e.target.value)
                           }
-                        }}
-                        disabled={!formData.expiryDateTime}
-                        className="text-xs"
-                      >
-                        00:00:00
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (formData.expiryDateTime) {
-                            const date = formData.expiryDateTime.split('T')[0];
-                            handleInputChange("expiryDateTime", `${date}T23:59`);
-                          }
-                        }}
-                        disabled={!formData.expiryDateTime}
-                        className="text-xs"
-                      >
-                        23:59:59
-                      </Button>
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="pl-10 text-sm"
+                        />
+                      </div>
                     </div>
                     
-                    <p className="text-xs text-muted-foreground">
-                      支持精确设置过期时间，可使用按钮快速设置为当天开始或结束时间
-                    </p>
+                    {/* 时间快捷设置 */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">快捷选择</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            tomorrow.setHours(23, 59, 0, 0);
+                            handleInputChange("expiryDateTime", tomorrow.toISOString().slice(0, 16));
+                          }}
+                          className="text-xs justify-start"
+                        >
+                          <Calendar className="mr-2 h-3 w-3" />
+                          明天 23:59
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const nextWeek = new Date();
+                            nextWeek.setDate(nextWeek.getDate() + 7);
+                            nextWeek.setHours(23, 59, 0, 0);
+                            handleInputChange("expiryDateTime", nextWeek.toISOString().slice(0, 16));
+                          }}
+                          className="text-xs justify-start"
+                        >
+                          <CalendarDays className="mr-2 h-3 w-3" />
+                          7天后 23:59
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const threeMonths = new Date();
+                            threeMonths.setMonth(threeMonths.getMonth() + 3);
+                            threeMonths.setHours(23, 59, 0, 0);
+                            handleInputChange("expiryDateTime", threeMonths.toISOString().slice(0, 16));
+                          }}
+                          className="text-xs justify-start"
+                        >
+                          <CalendarDays className="mr-2 h-3 w-3" />
+                          3个月后 23:59
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const nextYear = new Date();
+                            nextYear.setFullYear(nextYear.getFullYear() + 1);
+                            nextYear.setHours(23, 59, 0, 0);
+                            handleInputChange("expiryDateTime", nextYear.toISOString().slice(0, 16));
+                          }}
+                          className="text-xs justify-start"
+                        >
+                          <CalendarDays className="mr-2 h-3 w-3" />
+                          1年后 23:59
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+                      <p className="text-sm text-orange-900 dark:text-orange-100 flex items-start gap-2">
+                        <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>激活码将在指定的时间点过期（无论是否激活）</span>
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

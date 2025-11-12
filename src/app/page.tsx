@@ -289,9 +289,29 @@ export default function Home() {
                     <code className="text-cyan-300">{`  "data"`}</code>
                     <code className="text-white">{`: {`}</code>
                     <br />
+                    <code className="text-purple-300">{`    "code"`}</code>
+                    <code className="text-white">{`: `}</code>
+                    <code className="text-green-300">{`"U2m9Lw2cjOaV8WQDx3Hy"`}</code>
+                    <code className="text-white">{`,`}</code>
+                    <br />
+                    <code className="text-purple-300">{`    "device_id"`}</code>
+                    <code className="text-white">{`: `}</code>
+                    <code className="text-green-300">{`"unique-device-id"`}</code>
+                    <code className="text-white">{`,`}</code>
+                    <br />
                     <code className="text-purple-300">{`    "activated_at"`}</code>
                     <code className="text-white">{`: `}</code>
-                    <code className="text-green-300">{`"2025-08-01 10:30:00"`}</code>
+                    <code className="text-green-300">{`"2024-01-15 10:30:00"`}</code>
+                    <code className="text-white">{`,`}</code>
+                    <br />
+                    <code className="text-purple-300">{`    "expires_at"`}</code>
+                    <code className="text-white">{`: `}</code>
+                    <code className="text-green-300">{`"2024-02-14 10:30:00"`}</code>
+                    <code className="text-white">{`,`}</code>
+                    <br />
+                    <code className="text-purple-300">{`    "license_token"`}</code>
+                    <code className="text-white">{`: `}</code>
+                    <code className="text-green-300">{`"eyJhbGc..."`}</code>
                     <br />
                     <code className="text-white">{`  }`}</code>
                     <br />
@@ -300,6 +320,63 @@ export default function Home() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* 错误响应示例 */}
+            <Card className="mt-8 border-0 shadow-xl bg-gradient-to-br from-red-900 to-orange-800 text-white overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-red-600 to-orange-600 text-white">
+                <CardTitle className="flex items-center">
+                  <Code className="w-5 h-5 mr-2" />
+                  错误响应示例
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <pre className="text-sm leading-relaxed overflow-x-auto">
+                  <code className="text-red-400">{`HTTP/1.1 400 Bad Request`}</code>
+                  <br />
+                  <code className="text-yellow-300">{`Content-Type: application/json`}</code>
+                  <br />
+                  <br />
+                  <code className="text-white">{`{`}</code>
+                  <br />
+                  <code className="text-cyan-300">{`  "success"`}</code>
+                  <code className="text-white">{`: `}</code>
+                  <code className="text-red-300">{`false`}</code>
+                  <code className="text-white">{`,`}</code>
+                  <br />
+                  <code className="text-cyan-300">{`  "message"`}</code>
+                  <code className="text-white">{`: `}</code>
+                  <code className="text-orange-300">{`"该设备已激活，每个设备只能同时使用一个激活码"`}</code>
+                  <code className="text-white">{`,`}</code>
+                  <br />
+                  <code className="text-cyan-300">{`  "error_code"`}</code>
+                  <code className="text-white">{`: `}</code>
+                  <code className="text-orange-300">{`"DEVICE_ALREADY_ACTIVATED"`}</code>
+                  <br />
+                  <code className="text-white">{`}`}</code>
+                </pre>
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <p className="text-xs text-white/80 mb-2">常见错误码：</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-start gap-2">
+                      <code className="text-orange-300">DEVICE_ALREADY_ACTIVATED</code>
+                      <span className="text-white/60">- 设备已激活</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <code className="text-orange-300">CODE_ALREADY_USED</code>
+                      <span className="text-white/60">- 激活码已被使用</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <code className="text-orange-300">CODE_EXPIRED</code>
+                      <span className="text-white/60">- 激活码已过期</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <code className="text-orange-300">CODE_NOT_FOUND</code>
+                      <span className="text-white/60">- 激活码不存在</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* 特性说明 */}
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">

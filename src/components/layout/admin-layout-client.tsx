@@ -138,17 +138,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               ) : (
                 // 用户信息
                 <>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/10">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-base font-semibold">
                       {user.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
+                    <p className="text-sm font-semibold text-foreground truncate">
                       {user.username}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      ID: {user.id}
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                      管理员
                     </p>
                   </div>
                 </>

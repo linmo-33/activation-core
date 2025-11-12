@@ -41,6 +41,15 @@ import {
   Key,
   Plus,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Calendar,
+  CalendarDays,
+  Clock,
+  Infinity,
+  Ticket,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -59,6 +68,7 @@ interface ActivationCode {
   expires_at: string | null;
   used_at: string | null;
   used_by_device_id: string | null;
+  validity_days: number | null;
 }
 
 const getStatusBadge = (status: string) => {
@@ -91,10 +101,15 @@ export default function CodesPage() {
   const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
     fetchCodes();
-  }, [statusFilter, searchTerm]);
+  }, [statusFilter, searchTerm, currentPage, pageSize]);
 
   const fetchCodes = async () => {
     setIsLoading(true);
@@ -102,13 +117,15 @@ export default function CodesPage() {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (searchTerm) params.append("search", searchTerm);
-      params.append("limit", "50");
+      params.append("page", currentPage.toString());
+      params.append("limit", pageSize.toString());
 
       const response = await fetch(`/api/admin/codes?${params}`);
       if (response.ok) {
         const data = await response.json();
         setCodes(data.data.codes);
         setTotalCodes(data.data.pagination.total);
+        setTotalPages(data.data.pagination.totalPages);
       }
     } catch (error) {
       console.error("获取激活码列表失败:", error);
@@ -116,6 +133,11 @@ export default function CodesPage() {
       setIsLoading(false);
     }
   };
+
+  // 重置到第一页（当搜索或筛选条件改变时）
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   // 移除客户端过滤，因为已经在服务端过滤了
   const filteredCodes = codes;
@@ -324,10 +346,31 @@ export default function CodesPage() {
         {/* 激活码列表 */}
         <Card>
           <CardHeader>
-            <CardTitle>激活码列表</CardTitle>
-            <CardDescription>
-              {isLoading ? "加载中..." : `共找到 ${totalCodes} 个激活码`}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>激活码列表</CardTitle>
+                <CardDescription>
+                  {isLoading ? "加载中..." : `共找到 ${totalCodes} 个激活码，第 ${currentPage} / ${totalPages} 页`}
+                </CardDescription>
+              </div>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => {
+                  setPageSize(parseInt(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 条/页</SelectItem>
+                  <SelectItem value="20">20 条/页</SelectItem>
+                  <SelectItem value="50">50 条/页</SelectItem>
+                  <SelectItem value="100">100 条/页</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
@@ -351,6 +394,7 @@ export default function CodesPage() {
                     </TableHead>
                     <TableHead>激活码</TableHead>
                     <TableHead>状态</TableHead>
+                    <TableHead>有效期类型</TableHead>
                     <TableHead>创建时间</TableHead>
                     <TableHead>过期时间</TableHead>
                     <TableHead>使用时间</TableHead>
@@ -368,6 +412,9 @@ export default function CodesPage() {
                           </TableCell>
                           <TableCell>
                             <div className="h-6 w-32 bg-muted animate-pulse rounded"></div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="h-5 w-16 bg-muted animate-pulse rounded"></div>
                           </TableCell>
                           <TableCell>
                             <div className="h-5 w-16 bg-muted animate-pulse rounded"></div>
@@ -393,7 +440,7 @@ export default function CodesPage() {
                   ) : filteredCodes.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={9}
                         className="text-center py-12 text-muted-foreground"
                       >
                         <div className="flex flex-col items-center space-y-3">
@@ -442,11 +489,47 @@ export default function CodesPage() {
                           </code>
                         </TableCell>
                         <TableCell>{getStatusBadge(code.status)}</TableCell>
+                        <TableCell className="text-sm">
+                          {code.validity_days === 1 ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <Calendar className="mr-1 h-3 w-3" />
+                              日卡
+                            </Badge>
+                          ) : code.validity_days === 30 ? (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              <CalendarDays className="mr-1 h-3 w-3" />
+                              月卡
+                            </Badge>
+                          ) : code.validity_days ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Ticket className="mr-1 h-3 w-3" />
+                              {code.validity_days}天卡
+                            </Badge>
+                          ) : code.expires_at ? (
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                              <Clock className="mr-1 h-3 w-3" />
+                              指定时间
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Infinity className="mr-1 h-3 w-3" />
+                              永久
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {code.created_at || "-"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {code.expires_at || "永不过期"}
+                          {code.status === "used" && code.expires_at ? (
+                            code.expires_at
+                          ) : code.status === "unused" && code.validity_days ? (
+                            <span className="text-muted-foreground">激活后{code.validity_days}天</span>
+                          ) : code.expires_at ? (
+                            code.expires_at
+                          ) : (
+                            "永不过期"
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {code.used_at || "-"}
@@ -485,6 +568,78 @@ export default function CodesPage() {
                 </TableBody>
               </Table>
             </div>
+
+            {/* 分页控件 */}
+            {!isLoading && totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  显示第 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalCodes)} 条，共 {totalCodes} 条
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {/* 显示页码 */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="w-9"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
