@@ -25,6 +25,58 @@
    └─ 7. 保存激活状态        │
 ```
 
+## 🎯 激活码类型
+
+系统支持四种激活码类型，满足不同的业务场景：
+
+### 1. ♾️ 永久激活码
+- **有效期**: 永不过期
+- **expires_at**: `null`
+- **适用场景**: 永久授权、买断制软件
+- **示例响应**:
+  ```json
+  {
+    "activated_at": "2024-01-15 10:30:00",
+    "expires_at": null  // 永久有效
+  }
+  ```
+
+### 2. 📅 日卡
+- **有效期**: 激活后 24 小时
+- **计算方式**: 从激活时刻开始计时
+- **适用场景**: 短期试用、临时访问
+- **示例响应**:
+  ```json
+  {
+    "activated_at": "2024-01-15 10:30:00",
+    "expires_at": "2024-01-16 10:30:00"  // 激活后24小时
+  }
+  ```
+
+### 3. 📆 月卡
+- **有效期**: 激活后 30 天
+- **计算方式**: 从激活时刻开始计时
+- **适用场景**: 月度订阅、会员服务
+- **示例响应**:
+  ```json
+  {
+    "activated_at": "2024-01-15 10:30:00",
+    "expires_at": "2024-02-14 10:30:00"  // 激活后30天
+  }
+  ```
+
+### 4. ⏰ 指定时间
+- **有效期**: 在指定时间点过期
+- **计算方式**: 绝对时间，无论是否激活
+- **适用场景**: 限时活动、促销码
+- **示例响应**:
+  ```json
+  {
+    "activated_at": "2024-01-15 10:30:00",
+    "expires_at": "2024-12-31 23:59:59"  // 固定过期时间
+  }
+  ```
+
 ## 📡 API 接口
 
 ### 激活接口
@@ -32,7 +84,7 @@
 ```
 POST /api/client/activate
 Headers: X-API-Key: your-api-key
-Body: { "code": "ABC123", "device_id": "device-uuid" }
+Body: { "code": "U2m9Lw2cjOaV8WQDx3Hy", "device_id": "device-uuid" }
 ```
 
 ### 验证接口
@@ -45,14 +97,17 @@ Body: { "device_id": "device-uuid" }
 
 ### 响应格式
 
+#### 成功响应
+
 ```json
 {
   "success": true,
   "message": "激活成功",
   "data": {
+    "code": "U2m9Lw2cjOaV8WQDx3Hy",
     "device_id": "device-uuid",
-    "activated_at": "2024-01-01T00:00:00.000Z",
-    "expires_at": "2024-12-31T23:59:59.999Z",
+    "activated_at": "2024-01-15 10:30:00",
+    "expires_at": "2024-02-14 10:30:00",  // 月卡示例，永久激活码为 null
     "license_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9...",
     "nonce": "a1b2c3d4e5f6...",
     "ts": 1704067200000,
@@ -60,6 +115,23 @@ Body: { "device_id": "device-uuid" }
   }
 }
 ```
+
+#### 错误响应
+
+```json
+{
+  "success": false,
+  "message": "该设备已激活，每个设备只能同时使用一个激活码",
+  "error_code": "DEVICE_ALREADY_ACTIVATED"
+}
+```
+
+**错误码说明：**
+- `DEVICE_ALREADY_ACTIVATED` - 设备已激活
+- `CODE_ALREADY_USED` - 激活码已被使用
+- `CODE_EXPIRED` - 激活码已过期
+- `CODE_NOT_FOUND` - 激活码不存在
+- `ACTIVATION_FAILED` - 其他激活失败原因
 
 ## 💻 JavaScript 客户端示例
 
@@ -79,25 +151,43 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
 async function activateDevice() {
   try {
     const deviceId = generateDeviceId();
-    const activationCode = "ABC123DEF456";
+    const activationCode = "U2m9Lw2cjOaV8WQDx3Hy";
 
     const result = await client.activate(deviceId, activationCode);
 
     if (result.success) {
       console.log("✅ 激活成功，响应已验签");
+      
+      // 判断激活码类型
+      const isPermanent = result.data.expires_at === null;
+      console.log(`激活码类型: ${isPermanent ? '永久' : '有期限'}`);
+      
+      if (!isPermanent) {
+        console.log(`过期时间: ${result.data.expires_at}`);
+      }
+      
       localStorage.setItem(
         "activation_status",
         JSON.stringify({
           device_id: deviceId,
+          code: result.data.code,
           is_activated: true,
           activated_at: result.data.activated_at,
           expires_at: result.data.expires_at,
+          is_permanent: isPermanent,
           signature_verified: true,
         })
       );
     }
   } catch (error) {
     console.error("❌ 激活失败:", error.message);
+    
+    // 处理不同的错误类型
+    if (error.error_code === 'DEVICE_ALREADY_ACTIVATED') {
+      console.log('设备已激活，无需重复激活');
+    } else if (error.error_code === 'CODE_EXPIRED') {
+      console.log('激活码已过期，请联系管理员');
+    }
   }
 }
 
@@ -109,6 +199,23 @@ async function verifyActivation() {
 
     if (result.success && result.data.is_activated) {
       console.log("✅ 设备已激活且响应已验签");
+      
+      // 检查是否过期
+      if (result.data.expires_at) {
+        const expiresAt = new Date(result.data.expires_at);
+        const now = new Date();
+        
+        if (expiresAt > now) {
+          const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+          console.log(`剩余有效期: ${daysLeft} 天`);
+        } else {
+          console.log("⚠️ 激活码已过期");
+          return false;
+        }
+      } else {
+        console.log("永久激活码，无过期时间");
+      }
+      
       return true;
     }
     return false;
@@ -463,8 +570,102 @@ RESPONSE_SIGN_TOKEN_TTL_SEC=120
 - ✅ 实施完整的错误处理
 - ✅ 使用安全的密钥存储方案
 
+## 💡 客户端最佳实践
+
+### 1. 过期时间处理
+
+```javascript
+// 检查激活码是否过期
+function isActivationExpired(expiresAt) {
+  if (expiresAt === null) {
+    return false; // 永久激活码永不过期
+  }
+  
+  const expiryDate = new Date(expiresAt);
+  const now = new Date();
+  
+  return expiryDate <= now;
+}
+
+// 计算剩余天数
+function getDaysRemaining(expiresAt) {
+  if (expiresAt === null) {
+    return Infinity; // 永久激活码
+  }
+  
+  const expiryDate = new Date(expiresAt);
+  const now = new Date();
+  const diffMs = expiryDate - now;
+  
+  if (diffMs <= 0) {
+    return 0; // 已过期
+  }
+  
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+```
+
+### 2. 错误处理
+
+```javascript
+async function handleActivation(code, deviceId) {
+  try {
+    const result = await client.activate(deviceId, code);
+    return { success: true, data: result.data };
+  } catch (error) {
+    // 根据错误码提供友好提示
+    const errorMessages = {
+      'DEVICE_ALREADY_ACTIVATED': '该设备已激活，无需重复激活',
+      'CODE_ALREADY_USED': '激活码已被其他设备使用',
+      'CODE_EXPIRED': '激活码已过期，请联系管理员',
+      'CODE_NOT_FOUND': '激活码不存在，请检查输入',
+      'ACTIVATION_FAILED': '激活失败，请稍后重试'
+    };
+    
+    const message = errorMessages[error.error_code] || error.message;
+    return { success: false, message };
+  }
+}
+```
+
+### 3. 本地状态管理
+
+```javascript
+// 保存激活状态
+function saveActivationStatus(data) {
+  const status = {
+    device_id: data.device_id,
+    code: data.code,
+    is_activated: true,
+    activated_at: data.activated_at,
+    expires_at: data.expires_at,
+    is_permanent: data.expires_at === null,
+    last_verified: new Date().toISOString(),
+    signature_verified: true
+  };
+  
+  localStorage.setItem('activation_status', JSON.stringify(status));
+}
+
+// 读取激活状态
+function getActivationStatus() {
+  const stored = localStorage.getItem('activation_status');
+  if (!stored) return null;
+  
+  const status = JSON.parse(stored);
+  
+  // 检查是否过期
+  if (isActivationExpired(status.expires_at)) {
+    console.log('本地激活状态已过期');
+    return null;
+  }
+  
+  return status;
+}
+```
+
 ---
 
-📝 **文档版本**: v1.0  
-🔄 **最后更新**: 2025 年 8 月  
+📝 **文档版本**: v2.0  
+🔄 **最后更新**: 2025 年 12 月  
 📧 **技术支持**: 请查看项目 README 或提交 Issue
