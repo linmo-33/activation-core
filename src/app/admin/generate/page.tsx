@@ -19,11 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Plus, 
-  Clock, 
-  CheckCircle, 
-  Copy, 
+import {
+  Plus,
+  Clock,
+  CheckCircle,
+  Copy,
   AlertCircle,
   Calendar,
   CalendarDays,
@@ -54,7 +54,7 @@ export default function GeneratePage() {
         ...prev,
         [name]: value,
       };
-      
+
       // 当切换到自定义时间类型时，如果没有设置时间，则默认设置为明天23:59
       if (name === "expiryType" && value === "custom" && !prev.expiryDateTime) {
         const tomorrow = new Date();
@@ -62,7 +62,7 @@ export default function GeneratePage() {
         tomorrow.setHours(23, 59, 0, 0);
         updated.expiryDateTime = tomorrow.toISOString().slice(0, 16);
       }
-      
+
       return updated;
     });
   };
@@ -324,7 +324,7 @@ export default function GeneratePage() {
                       <span>日卡：激活后 24 小时有效</span>
                     </p>
                     <p className="text-xs text-green-700 dark:text-green-300 mt-2 ml-6">
-                      • 生成后可随时激活，激活时刻开始计时<br/>
+                      • 生成后可随时激活，激活时刻开始计时<br />
                       • 例如：2024-01-15 10:30 激活 → 2024-01-16 10:30 过期
                     </p>
                   </div>
@@ -337,7 +337,7 @@ export default function GeneratePage() {
                       <span>月卡：激活后 30 天有效</span>
                     </p>
                     <p className="text-xs text-purple-700 dark:text-purple-300 mt-2 ml-6">
-                      • 生成后可随时激活，激活时刻开始计时<br/>
+                      • 生成后可随时激活，激活时刻开始计时<br />
                       • 例如：2024-01-01 10:30 激活 → 2024-01-31 10:30 过期
                     </p>
                   </div>
@@ -363,7 +363,7 @@ export default function GeneratePage() {
                         />
                       </div>
                     </div>
-                    
+
                     {/* 时间快捷设置 */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">快捷选择</Label>
@@ -430,7 +430,7 @@ export default function GeneratePage() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
                       <p className="text-sm text-orange-900 dark:text-orange-100 flex items-start gap-2">
                         <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -495,30 +495,49 @@ export default function GeneratePage() {
                 </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {generatedCodes.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
-                    >
-                      <div className="space-y-1">
-                        <code className="text-sm font-mono bg-background px-2 py-1 rounded">
-                          {item.code}
-                        </code>
-                        <p className="text-xs text-muted-foreground">
-                          {item.expiresAt
-                            ? `过期时间: ${item.expiresAt}`
-                            : "永不过期"}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigator.clipboard.writeText(item.code)}
+                  {generatedCodes.map((item) => {
+                    // 根据生成时的类型显示不同的有效期信息
+                    let expiryInfo = "";
+                    let expiryIcon = null;
+
+                    if (formData.expiryType === "never") {
+                      expiryInfo = "永久有效";
+                      expiryIcon = <Infinity className="h-3 w-3 mr-1 inline" />;
+                    } else if (formData.expiryType === "daily") {
+                      expiryInfo = "日卡 - 激活后 24 小时有效";
+                      expiryIcon = <Calendar className="h-3 w-3 mr-1 inline" />;
+                    } else if (formData.expiryType === "monthly") {
+                      expiryInfo = "月卡 - 激活后 30 天有效";
+                      expiryIcon = <CalendarDays className="h-3 w-3 mr-1 inline" />;
+                    } else if (formData.expiryType === "custom" && item.expiresAt) {
+                      expiryInfo = `过期时间: ${item.expiresAt}`;
+                      expiryIcon = <Clock className="h-3 w-3 mr-1 inline" />;
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
                       >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="space-y-1">
+                          <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                            {item.code}
+                          </code>
+                          <p className="text-xs text-muted-foreground flex items-center">
+                            {expiryIcon}
+                            {expiryInfo}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigator.clipboard.writeText(item.code)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
