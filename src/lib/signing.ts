@@ -12,8 +12,8 @@ function ensureEnv(name: string): string {
 
 async function getPrivateKey(): Promise<KeyLike> {
 	if (cachedPrivateKey) return cachedPrivateKey
-	const pem = ensureEnv('RESPONSE_SIGN_PRIVATE_KEY_PEM')
-	cachedPrivateKey = await importPKCS8(pem, 'ES256')
+	const pem = ensureEnv('RESPONSE_SIGN_PRIVATE_KEY_PEM').replace(/\\n/g, '\n')
+    cachedPrivateKey = await importPKCS8(pem, 'ES256')
 	return cachedPrivateKey
 }
 
