@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { isAdminSystemInitialized } from "@/lib/db";
 import { AdminSetupForm, SetupPageSkeleton } from "@/components/admin/setup-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage() {
   const isInitialized = await isAdminSystemInitialized();
 

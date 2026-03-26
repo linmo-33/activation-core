@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { isAdminSystemInitialized } from "@/lib/db";
 import { AdminLoginForm, LoginPageSkeleton } from "@/components/admin/login-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const isInitialized = await isAdminSystemInitialized();
 
