@@ -13,6 +13,8 @@
 # testing
 /coverage
 
+
+
 # next.js
 /.next/
 /out/
@@ -23,6 +25,7 @@
 # misc
 .DS_Store
 *.pem
+/exports
 
 # debug
 npm-debug.log*
@@ -39,4 +42,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
