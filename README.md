@@ -8,6 +8,31 @@
 
 `activation-core` 是一个面向单管理员场景的激活码管理系统，提供激活码生成、设备绑定、状态验证和基础后台管理能力。
 
+<p>
+  <strong><span style="color:#d73a49;">⚠️ 重要迁移提示</span></strong><br />
+  <strong><span style="color:#d73a49;">项目正在从手写 SQL 迁移到 Drizzle ORM 新架构。</span></strong><br />
+  <strong><span style="color:#d73a49;">新部署将逐步切换到 Drizzle 管理的数据库结构；已部署系统升级前，请先备份数据库、导出关键表数据，并在新数据库上重新执行新的数据库脚本或 migration。</span></strong>
+</p>
+
+当前关键迁移表：
+
+- `admin_users`
+- `activation_codes`
+
+当前已提供基础导出/导入脚本：
+
+```bash
+pnpm run db:export -- exports/activation-core-export.json
+pnpm run db:import -- exports/activation-core-export.json
+```
+
+迁移到新架构时，推荐顺序：
+
+1. 备份旧数据库
+2. 导出关键表数据
+3. 在新数据库中执行新的数据库脚本或 Drizzle migration
+4. 再执行数据导入
+
 ## 功能特性
 
 - 首次初始化创建唯一管理员账号
@@ -98,6 +123,7 @@ example/        客户端示例
 当前仓库正在进行认证、安全和文档结构重构。
 
 - README 是当前唯一优先维护的公开入口文档
+- 数据库层正在迁移到 Drizzle ORM 新架构
 - 详细产品文档后续迁移到专门的文档系统
 - 涉及初始化、认证和接口安全的行为，以当前代码实现为准
 

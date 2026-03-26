@@ -11,6 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:export": "node scripts/db-export.js",
+    "db:import": "node scripts/db-import.js",
     "deploy-check": "node scripts/deployment-check.js",
     "hash-password": "node scripts/hash-password.js",
     "db-init": "echo 'Please run the SQL script in scripts/init-db.sql in your database'",
