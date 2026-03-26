@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { jwtVerify } from 'jose';
-import { getAdminByUsername, isAdminSystemInitialized } from '@/lib/db';
+import {
+  clearAdminLoginFailures,
+  getAdminByUsername,
+  getAdminLoginGuardStatus,
+  isAdminSystemInitialized,
+  recordAdminLoginFailure
+} from '@/lib/db';
 import {
   createAdminSessionToken,
   getAdminSessionCookieOptions,
   getClearedAdminSessionCookieOptions
 } from '@/lib/admin-auth';
+import { getClientIP } from '@/lib/rate-limit';
 
 // 安全检查：确保 JWT_SECRET 已设置
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key') {
@@ -35,10 +42,12 @@ export async function POST(request: NextRequest) {
 
     // 解析请求体
     const body = await request.json();
-    const { username, password } = body;
+    const rawUsername = typeof body.username === 'string' ? body.username.trim() : '';
+    const rawPassword = typeof body.password === 'string' ? body.password : '';
+    const clientIP = getClientIP(request);
 
     // 验证请求参数
-    if (!username || !password) {
+    if (!rawUsername || !rawPassword) {
       return NextResponse.json(
         { 
           success: false, 
@@ -49,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证用户名格式
-    if (username.length < 3 || username.length > 50) {
+    if (rawUsername.length < 3 || rawUsername.length > 50) {
       return NextResponse.json(
         { 
           success: false, 
@@ -60,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证密码格式
-    if (password.length < 6) {
+    if (rawPassword.length < 6) {
       return NextResponse.json(
         { 
           success: false, 
@@ -70,31 +79,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const guardStatus = await getAdminLoginGuardStatus(rawUsername, clientIP);
+    if (guardStatus.blocked) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `登录失败次数过多，请在 ${Math.ceil(guardStatus.retryAfterSeconds / 60)} 分钟后重试`,
+          retryAfter: guardStatus.retryAfterSeconds
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': guardStatus.retryAfterSeconds.toString()
+          }
+        }
+      );
+    }
+
     // 查询管理员用户
-    const admin = await getAdminByUsername(username);
+    const admin = await getAdminByUsername(rawUsername);
 
     if (!admin) {
+      const failureStatus = await recordAdminLoginFailure(rawUsername, clientIP);
       // 为了安全，不透露具体是用户名错误还是密码错误
       return NextResponse.json(
         {
           success: false,
-          message: '用户名或密码错误'
+          message: failureStatus.blocked
+            ? `登录失败次数过多，请在 ${Math.ceil(failureStatus.retryAfterSeconds / 60)} 分钟后重试`
+            : '用户名或密码错误',
+          ...(failureStatus.blocked ? { retryAfter: failureStatus.retryAfterSeconds } : {})
         },
-        { status: 401 }
+        {
+          status: failureStatus.blocked ? 429 : 401,
+          headers: failureStatus.blocked
+            ? { 'Retry-After': failureStatus.retryAfterSeconds.toString() }
+            : undefined
+        }
       );
     }
 
     // 验证密码
-    const isPasswordValid = await bcrypt.compare(password, admin.password_hash);
+    const isPasswordValid = await bcrypt.compare(rawPassword, admin.password_hash);
     if (!isPasswordValid) {
+      const failureStatus = await recordAdminLoginFailure(rawUsername, clientIP);
       return NextResponse.json(
         {
           success: false,
-          message: '用户名或密码错误'
+          message: failureStatus.blocked
+            ? `登录失败次数过多，请在 ${Math.ceil(failureStatus.retryAfterSeconds / 60)} 分钟后重试`
+            : '用户名或密码错误',
+          ...(failureStatus.blocked ? { retryAfter: failureStatus.retryAfterSeconds } : {})
         },
-        { status: 401 }
+        {
+          status: failureStatus.blocked ? 429 : 401,
+          headers: failureStatus.blocked
+            ? { 'Retry-After': failureStatus.retryAfterSeconds.toString() }
+            : undefined
+        }
       );
     }
+
+    await clearAdminLoginFailures(rawUsername, clientIP);
 
     // 生成 JWT Token
     const token = await createAdminSessionToken({
