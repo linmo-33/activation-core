@@ -56,7 +56,7 @@ export function SetupPageSkeleton() {
 
 export function AdminSetupForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { refreshAuth } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -103,7 +103,7 @@ export function AdminSetupForm() {
       const result = await response.json();
 
       if (result.success) {
-        login(result.data.user);
+        await refreshAuth();
         setTimeout(() => {
           router.push("/admin");
           router.refresh();

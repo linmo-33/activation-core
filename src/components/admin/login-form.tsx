@@ -57,7 +57,7 @@ export function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/admin";
-  const { login } = useAuth();
+  const { refreshAuth } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +90,7 @@ export function AdminLoginForm() {
       }
 
       if (result.success) {
-        login(result.data.user);
+        await refreshAuth();
         setTimeout(() => {
           router.push(redirectTo);
           router.refresh();
