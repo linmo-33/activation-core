@@ -1,8 +1,4 @@
--- 激活码管理系统数据库初始化脚本（简化版本）
--- 在 Supabase 项目的 SQL 编辑器中执行此脚本
-
--- 设置数据库时区为亚洲/上海时区
-SET timezone = 'Asia/Shanghai';
+-- 激活码管理系统数据库初始化脚本
 
 -- 创建管理员用户表
 CREATE TABLE IF NOT EXISTS admin_users (
@@ -13,7 +9,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建激活码表（简化版本）
+-- 创建激活码表
 CREATE TABLE IF NOT EXISTS activation_codes (
     id SERIAL PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,  -- 20位字母数字激活码
@@ -21,7 +17,20 @@ CREATE TABLE IF NOT EXISTS activation_codes (
     expires_at TIMESTAMP WITH TIME ZONE NULL,
     used_at TIMESTAMP WITH TIME ZONE NULL,
     used_by_device_id VARCHAR(255) NULL,
-    validity_days INTEGER NULL,  -- 激活后的有效天数：NULL=使用expires_at，1=日卡，30=月卡
+    validity_days INTEGER NULL CHECK (validity_days IS NULL OR validity_days > 0),  -- 激活后的有效天数
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建管理员登录保护表
+-- 用于登录失败计数、限流和锁定控制
+CREATE TABLE IF NOT EXISTS admin_login_guards (
+    guard_key VARCHAR(128) PRIMARY KEY,
+    guard_type VARCHAR(20) NOT NULL CHECK (guard_type IN ('username', 'ip')),
+    failed_count INTEGER NOT NULL DEFAULT 0 CHECK (failed_count >= 0),
+    first_failed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_failed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    locked_until TIMESTAMP WITH TIME ZONE NULL CHECK (locked_until IS NULL OR locked_until >= first_failed_at),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -36,6 +45,8 @@ CREATE INDEX IF NOT EXISTS idx_activation_codes_expires_at ON activation_codes(e
 CREATE INDEX IF NOT EXISTS idx_activation_codes_device_id ON activation_codes(used_by_device_id);
 CREATE INDEX IF NOT EXISTS idx_activation_codes_created_at ON activation_codes(created_at);
 CREATE INDEX IF NOT EXISTS idx_activation_codes_validity_days ON activation_codes(validity_days);
+CREATE INDEX IF NOT EXISTS idx_admin_login_guards_type ON admin_login_guards(guard_type);
+CREATE INDEX IF NOT EXISTS idx_admin_login_guards_locked_until ON admin_login_guards(locked_until);
 
 -- 创建更新时间触发器函数
 -- 使用 SECURITY DEFINER 和安全的 search_path 防止 search_path 劫持攻击
@@ -51,13 +62,32 @@ END;
 $$ language 'plpgsql';
 
 -- 为表添加更新时间触发器
-CREATE TRIGGER update_admin_users_updated_at 
-    BEFORE UPDATE ON admin_users 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_admin_users_updated_at'
+    ) THEN
+        CREATE TRIGGER update_admin_users_updated_at
+            BEFORE UPDATE ON admin_users
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_activation_codes_updated_at 
-    BEFORE UPDATE ON activation_codes 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_activation_codes_updated_at'
+    ) THEN
+        CREATE TRIGGER update_activation_codes_updated_at
+            BEFORE UPDATE ON activation_codes
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_admin_login_guards_updated_at'
+    ) THEN
+        CREATE TRIGGER update_admin_login_guards_updated_at
+            BEFORE UPDATE ON admin_login_guards
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- 管理员账号初始化说明
 -- 不再在数据库脚本中写入默认管理员，避免默认密码带来的安全风险
@@ -65,23 +95,41 @@ CREATE TRIGGER update_activation_codes_updated_at
 -- 系统只允许创建一个管理员账号，已初始化的系统不会展示 setup 页面
 
 -- ================================
--- Supabase 安全配置
+-- 安全配置
 -- ================================
 
 -- 启用行级安全策略 (RLS)
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activation_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_login_guards ENABLE ROW LEVEL SECURITY;
 
--- 为 admin_users 表创建 RLS 策略
--- 注意：由于这个应用使用直接数据库连接而不是 Supabase Auth，
--- 我们创建一个允许所有操作的策略，实际的安全控制在应用层实现
-CREATE POLICY "Enable all operations for admin_users" ON admin_users
-    FOR ALL USING (true) WITH CHECK (true);
+-- 为各表创建 RLS 策略
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'admin_users' AND policyname = 'Enable all operations for admin_users'
+    ) THEN
+        CREATE POLICY "Enable all operations for admin_users" ON admin_users
+            FOR ALL USING (true) WITH CHECK (true);
+    END IF;
 
--- 为 activation_codes 表创建 RLS 策略
--- 同样，由于使用直接数据库连接，允许所有操作
-CREATE POLICY "Enable all operations for activation_codes" ON activation_codes
-    FOR ALL USING (true) WITH CHECK (true);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'activation_codes' AND policyname = 'Enable all operations for activation_codes'
+    ) THEN
+        CREATE POLICY "Enable all operations for activation_codes" ON activation_codes
+            FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'admin_login_guards' AND policyname = 'Enable all operations for admin_login_guards'
+    ) THEN
+        CREATE POLICY "Enable all operations for admin_login_guards" ON admin_login_guards
+            FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
 
 -- ================================
 -- 修复 SECURITY DEFINER 视图问题

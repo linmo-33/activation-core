@@ -3,13 +3,12 @@ import { Pool, PoolClient } from 'pg';
 // 数据库连接池配置 
 const dbConfig = {
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
   max: 5,
   min: 0,
   idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 5000,
-  acquireTimeoutMillis: 10000,
-  options: '-c timezone=Asia/Shanghai',
+  maxUses: 7500,
 };
 
 // 全局连接池实例
@@ -169,6 +168,28 @@ export interface AdminUser {
   password_hash: string;
 }
 
+type AdminLoginGuardType = 'username' | 'ip';
+
+interface AdminLoginGuardRecord {
+  guard_key: string;
+  guard_type: AdminLoginGuardType;
+  failed_count: number;
+  first_failed_at: Date;
+  last_failed_at: Date;
+  locked_until: Date | null;
+}
+
+interface AdminLoginGuardConfig {
+  maxFailures: number;
+  windowMinutes: number;
+  lockMinutes: number;
+}
+
+export interface AdminLoginGuardStatus {
+  blocked: boolean;
+  retryAfterSeconds: number;
+}
+
 export interface ActivationCode {
   id: number;
   code: string;
@@ -178,6 +199,44 @@ export interface ActivationCode {
   used_by_device_id: string | null;
   created_at: Date;
   validity_days: number | null; // 激活后的有效天数：NULL=使用expires_at，1=日卡，30=月卡
+}
+
+const ADMIN_LOGIN_GUARD_CONFIGS: Record<AdminLoginGuardType, AdminLoginGuardConfig> = {
+  username: {
+    maxFailures: 5,
+    windowMinutes: 15,
+    lockMinutes: 30
+  },
+  ip: {
+    maxFailures: 10,
+    windowMinutes: 15,
+    lockMinutes: 15
+  }
+};
+
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function getRetryAfterSeconds(lockedUntil: Date | null, now: Date): number {
+  if (!lockedUntil) {
+    return 0;
+  }
+
+  return Math.max(0, Math.ceil((lockedUntil.getTime() - now.getTime()) / 1000));
+}
+
+function normalizeLoginGuardRecord(
+  row: Record<string, unknown>
+): AdminLoginGuardRecord {
+  return {
+    guard_key: String(row.guard_key),
+    guard_type: row.guard_type as AdminLoginGuardType,
+    failed_count: Number(row.failed_count),
+    first_failed_at: new Date(String(row.first_failed_at)),
+    last_failed_at: new Date(String(row.last_failed_at)),
+    locked_until: row.locked_until ? new Date(String(row.locked_until)) : null
+  };
 }
 
 // 数据库操作函数
@@ -244,6 +303,140 @@ export async function createInitialAdmin(
 
     return insertResult.rows[0] as AdminUser;
   });
+}
+
+/**
+ * 获取管理员登录保护状态
+ * 当用户名或 IP 任一被锁定时，禁止继续登录
+ */
+export async function getAdminLoginGuardStatus(
+  username: string,
+  ipAddress: string
+): Promise<AdminLoginGuardStatus> {
+  const result = await query(
+    `SELECT guard_key, guard_type, failed_count, first_failed_at, last_failed_at, locked_until
+     FROM admin_login_guards
+     WHERE guard_key = ANY($1::text[])`,
+    [[`username:${username}`, `ip:${ipAddress}`]]
+  );
+
+  const now = new Date();
+  let blocked = false;
+  let retryAfterSeconds = 0;
+
+  for (const row of result.rows) {
+    const record = normalizeLoginGuardRecord(row);
+    if (record.locked_until && record.locked_until > now) {
+      blocked = true;
+      retryAfterSeconds = Math.max(retryAfterSeconds, getRetryAfterSeconds(record.locked_until, now));
+    }
+  }
+
+  return {
+    blocked,
+    retryAfterSeconds
+  };
+}
+
+async function upsertAdminLoginGuardFailure(
+  client: PoolClient,
+  guardType: AdminLoginGuardType,
+  identifier: string
+): Promise<AdminLoginGuardStatus> {
+  const config = ADMIN_LOGIN_GUARD_CONFIGS[guardType];
+  const guardKey = `${guardType}:${identifier}`;
+  const now = new Date();
+
+  const existingResult = await client.query(
+    `SELECT guard_key, guard_type, failed_count, first_failed_at, last_failed_at, locked_until
+     FROM admin_login_guards
+     WHERE guard_key = $1
+     FOR UPDATE`,
+    [guardKey]
+  );
+
+  let failedCount = 1;
+  let firstFailedAt = now;
+  let lockedUntil: Date | null = null;
+
+  if (existingResult.rows.length > 0) {
+    const existingRecord = normalizeLoginGuardRecord(existingResult.rows[0]);
+    const windowExpired = addMinutes(existingRecord.first_failed_at, config.windowMinutes) <= now;
+    const activeLock = existingRecord.locked_until && existingRecord.locked_until > now;
+
+    failedCount = windowExpired ? 1 : existingRecord.failed_count + 1;
+    firstFailedAt = windowExpired ? now : existingRecord.first_failed_at;
+    lockedUntil = activeLock ? existingRecord.locked_until : null;
+
+    if (failedCount >= config.maxFailures) {
+      lockedUntil = addMinutes(now, config.lockMinutes);
+    }
+
+    await client.query(
+      `UPDATE admin_login_guards
+       SET failed_count = $2,
+           first_failed_at = $3,
+           last_failed_at = $4,
+           locked_until = $5
+       WHERE guard_key = $1`,
+      [guardKey, failedCount, firstFailedAt, now, lockedUntil]
+    );
+  } else {
+    if (failedCount >= config.maxFailures) {
+      lockedUntil = addMinutes(now, config.lockMinutes);
+    }
+
+    await client.query(
+      `INSERT INTO admin_login_guards (
+         guard_key,
+         guard_type,
+         failed_count,
+         first_failed_at,
+         last_failed_at,
+         locked_until
+       ) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [guardKey, guardType, failedCount, firstFailedAt, now, lockedUntil]
+    );
+  }
+
+  return {
+    blocked: lockedUntil !== null && lockedUntil > now,
+    retryAfterSeconds: getRetryAfterSeconds(lockedUntil, now)
+  };
+}
+
+/**
+ * 记录管理员登录失败
+ * 同时按用户名和 IP 两个维度更新失败计数与锁定状态
+ */
+export async function recordAdminLoginFailure(
+  username: string,
+  ipAddress: string
+): Promise<AdminLoginGuardStatus> {
+  return transaction(async (client) => {
+    const usernameStatus = await upsertAdminLoginGuardFailure(client, 'username', username);
+    const ipStatus = await upsertAdminLoginGuardFailure(client, 'ip', ipAddress);
+
+    return {
+      blocked: usernameStatus.blocked || ipStatus.blocked,
+      retryAfterSeconds: Math.max(usernameStatus.retryAfterSeconds, ipStatus.retryAfterSeconds)
+    };
+  });
+}
+
+/**
+ * 清理管理员登录失败状态
+ * 登录成功后重置用户名和 IP 两个维度的保护记录
+ */
+export async function clearAdminLoginFailures(
+  username: string,
+  ipAddress: string
+): Promise<void> {
+  await query(
+    `DELETE FROM admin_login_guards
+     WHERE guard_key = ANY($1::text[])`,
+    [[`username:${username}`, `ip:${ipAddress}`]]
+  );
 }
 
 /**
