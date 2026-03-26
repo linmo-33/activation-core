@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { SignJWT, jwtVerify } from 'jose';
-import { getAdminByUsername } from '@/lib/db';
+import { jwtVerify } from 'jose';
+import { getAdminByUsername, isAdminSystemInitialized } from '@/lib/db';
+import {
+  createAdminSessionToken,
+  getAdminSessionCookieOptions,
+  getClearedAdminSessionCookieOptions
+} from '@/lib/admin-auth';
 
 // 安全检查：确保 JWT_SECRET 已设置
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key') {
@@ -17,6 +22,17 @@ const JWT_EXPIRES_IN = '24h';
  */
 export async function POST(request: NextRequest) {
   try {
+    const isInitialized = await isAdminSystemInitialized();
+    if (!isInitialized) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: '系统尚未初始化，请先完成首次设置'
+        },
+        { status: 403 }
+      );
+    }
+
     // 解析请求体
     const body = await request.json();
     const { username, password } = body;
@@ -81,15 +97,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 生成 JWT Token
-    const token = await new SignJWT({
+    const token = await createAdminSessionToken({
       id: admin.id,
-      username: admin.username,
-      role: 'admin'
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('24h')
-      .sign(JWT_SECRET);
+      username: admin.username
+    });
 
     // 创建响应
     const response = NextResponse.json(
@@ -109,23 +120,10 @@ export async function POST(request: NextRequest) {
     );
 
     // 设置新的 HttpOnly Cookie - 根据环境动态配置安全属性
-    const isProduction = process.env.NODE_ENV === 'production';
-    response.cookies.set('token', token, {
-      httpOnly: true,
-      secure: isProduction, // 生产环境启用 HTTPS only
-      sameSite: isProduction ? 'strict' : 'lax', // 生产环境使用更严格的 SameSite
-      maxAge: 24 * 60 * 60 * 1000, // 24小时
-      path: '/'
-    });
+    response.cookies.set('token', token, getAdminSessionCookieOptions());
 
     // 清除旧的 admin_token cookie（向后兼容）
-    response.cookies.set('admin_token', '', {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/'
-    });
+    response.cookies.set('admin_token', '', getClearedAdminSessionCookieOptions());
 
 
     return response;
@@ -158,23 +156,10 @@ export async function DELETE() {
     );
 
     // 清除新的 token cookie - 使用与设置时相同的安全属性
-    const isProduction = process.env.NODE_ENV === 'production';
-    response.cookies.set('token', '', {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
-      maxAge: 0,
-      path: '/'
-    });
+    response.cookies.set('token', '', getClearedAdminSessionCookieOptions());
 
     // 清除旧的 admin_token cookie（向后兼容）
-    response.cookies.set('admin_token', '', {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
-      maxAge: 0,
-      path: '/'
-    });
+    response.cookies.set('admin_token', '', getClearedAdminSessionCookieOptions());
 
     return response;
 

@@ -201,6 +201,52 @@ export async function getAdminByUsername(username: string): Promise<AdminUser | 
 }
 
 /**
+ * 检查管理员系统是否已初始化
+ * @returns 是否已存在管理员账号
+ */
+export async function isAdminSystemInitialized(): Promise<boolean> {
+  const result = await query(
+    'SELECT EXISTS (SELECT 1 FROM admin_users) AS initialized'
+  );
+
+  return result.rows[0]?.initialized === true;
+}
+
+/**
+ * 创建首个管理员账号
+ * 仅允许在系统未初始化时调用
+ * @param username 管理员用户名
+ * @param passwordHash 密码哈希
+ * @returns 创建后的管理员信息
+ */
+export async function createInitialAdmin(
+  username: string,
+  passwordHash: string
+): Promise<AdminUser> {
+  return transaction(async (client) => {
+    // 锁表确保并发初始化时只会成功创建一个管理员
+    await client.query('LOCK TABLE admin_users IN ACCESS EXCLUSIVE MODE');
+
+    const existingAdminResult = await client.query(
+      'SELECT id FROM admin_users LIMIT 1'
+    );
+
+    if (existingAdminResult.rows.length > 0) {
+      throw new Error('ADMIN_ALREADY_INITIALIZED');
+    }
+
+    const insertResult = await client.query(
+      `INSERT INTO admin_users (username, password_hash)
+       VALUES ($1, $2)
+       RETURNING id, username, password_hash`,
+      [username, passwordHash]
+    );
+
+    return insertResult.rows[0] as AdminUser;
+  });
+}
+
+/**
  * 创建激活码
  * @param codes 激活码数组
  * @returns 创建的激活码记录

@@ -35,7 +35,7 @@ const protectedApiPaths = [
   '/api/admin/settings'
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   console.log('中间件处理路径:', pathname);
@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     // 如果是页面路径，重定向到登录页
     const loginUrl = new URL('/admin/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
@@ -90,9 +90,9 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     // 安全日志：不记录敏感信息
     console.error('JWT 验证失败:', error instanceof Error ? error.message : 'Unknown error');
-    
+
     // 清除无效的 token
-    const response = isProtectedApiPath 
+    const response = isProtectedApiPath
       ? NextResponse.json(
           { success: false, message: 'Token 无效或已过期' },
           { status: 401 }
@@ -122,14 +122,14 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-// 配置中间件匹配的路径
+// 配置代理匹配的路径
 export const config = {
   matcher: [
     // 匹配管理员根路径
     '/admin',
-    // 匹配需要保护的管理员路径（排除登录页面）
-    '/admin/((?!login).*)',
-    // 匹配管理员 API 路径（排除登录 API）
-    '/api/admin/((?!login).*)',
+    // 匹配需要保护的管理员路径（排除登录和首次初始化页面）
+    '/admin/((?!login|setup).*)',
+    // 匹配管理员 API 路径（排除登录和首次初始化 API）
+    '/api/admin/((?!login|setup).*)',
   ],
 };

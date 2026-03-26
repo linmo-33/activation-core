@@ -59,15 +59,10 @@ CREATE TRIGGER update_activation_codes_updated_at
     BEFORE UPDATE ON activation_codes 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 插入默认管理员账户（密码: admin123）
--- 使用 bcrypt 哈希，saltRounds = 10
--- ⚠️ 重要：部署到生产环境后请立即修改默认密码！
-INSERT INTO admin_users (username, password_hash)
-VALUES ('admin', '$2b$10$4n.KlGeI9XuRAjJ8mJ2ivuQ2CSekGAeLv5.nj1ydNZwWz23MF8Peq')
-ON CONFLICT (username) DO UPDATE SET password_hash = '$2b$10$4n.KlGeI9XuRAjJ8mJ2ivuQ2CSekGAeLv5.nj1ydNZwWz23MF8Peq';
-
--- 生成新密码哈希的方法：
--- 运行: node scripts/hash-password.js your-new-password
+-- 管理员账号初始化说明
+-- 不再在数据库脚本中写入默认管理员，避免默认密码带来的安全风险
+-- 初始化数据库后，请首次访问 /admin/setup 完成管理员账号创建
+-- 系统只允许创建一个管理员账号，已初始化的系统不会展示 setup 页面
 
 -- ================================
 -- Supabase 安全配置
