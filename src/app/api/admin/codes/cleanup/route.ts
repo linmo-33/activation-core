@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { cleanupExpiredUnusedCodes, getActivationCleanupStats } from '@/server/activation';
 import { formatDateTimeForAPI } from '@/lib/utils';
 
 /**
@@ -9,14 +9,7 @@ import { formatDateTimeForAPI } from '@/lib/utils';
 export async function POST(request: NextRequest) {
   try {
     // 执行清理操作 - 删除过期的激活码
-    const cleanupResult = await query(`
-      DELETE FROM activation_codes
-      WHERE expires_at IS NOT NULL
-      AND expires_at <= CURRENT_TIMESTAMP
-      AND status = 'unused'
-    `);
-
-    const cleanedCount = cleanupResult.rowCount || 0;
+    const cleanedCount = await cleanupExpiredUnusedCodes();
 
     // 可选：同时清理一些其他过期数据
     // 例如：清理超过一定时间的已使用激活码（如果需要的话）
@@ -54,34 +47,9 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     // 统计可清理的过期激活码数量
-    const expiredResult = await query(`
-      SELECT COUNT(*) as expired_count
-      FROM activation_codes
-      WHERE expires_at IS NOT NULL
-      AND expires_at <= CURRENT_TIMESTAMP
-      AND status = 'unused'
-    `);
-
-    // 统计总的过期激活码（包括已使用的）
-    const totalExpiredResult = await query(`
-      SELECT COUNT(*) as total_expired
-      FROM activation_codes
-      WHERE expires_at IS NOT NULL
-      AND expires_at <= CURRENT_TIMESTAMP
-    `);
-
-    // 统计数据库大小相关信息（如果需要的话）
-    const sizeResult = await query(`
-      SELECT 
-        COUNT(*) as total_codes,
-        COUNT(CASE WHEN status = 'unused' THEN 1 END) as unused_codes,
-        COUNT(CASE WHEN status = 'used' THEN 1 END) as used_codes
-      FROM activation_codes
-    `);
-
-    const expiredCount = parseInt(expiredResult.rows[0].expired_count) || 0;
-    const totalExpired = parseInt(totalExpiredResult.rows[0].total_expired) || 0;
-    const stats = sizeResult.rows[0];
+    const stats = await getActivationCleanupStats();
+    const expiredCount = stats.cleanableExpired;
+    const totalExpired = stats.totalExpired;
 
     return NextResponse.json(
       {
@@ -91,9 +59,9 @@ export async function GET() {
           cleanable_expired: expiredCount,
           total_expired: totalExpired,
           database_stats: {
-            total_codes: parseInt(stats.total_codes) || 0,
-            unused_codes: parseInt(stats.unused_codes) || 0,
-            used_codes: parseInt(stats.used_codes) || 0
+            total_codes: stats.totalCodes,
+            unused_codes: stats.unusedCodes,
+            used_codes: stats.usedCodes
           },
           recommendations: {
             should_cleanup: expiredCount > 0,

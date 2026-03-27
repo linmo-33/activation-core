@@ -8,11 +8,10 @@
 
 `activation-core` 是一个面向单管理员场景的激活码管理系统，提供激活码生成、设备绑定、状态验证和基础后台管理能力。
 
-<p>
-  <strong><span style="color:#d73a49;">⚠️ 重要迁移提示</span></strong><br />
-  <strong><span style="color:#d73a49;">项目正在从手写 SQL 迁移到 Drizzle ORM 新架构。</span></strong><br />
-  <strong><span style="color:#d73a49;">新部署将逐步切换到 Drizzle 管理的数据库结构；已部署系统升级前，请先备份数据库、导出关键表数据，并在新数据库上重新执行新的数据库脚本或 migration。</span></strong>
-</p>
+> [!IMPORTANT]
+> 项目正在从手写 SQL 迁移到 Drizzle ORM 新架构。
+> 新部署请直接使用 Drizzle migration 初始化数据库。
+> 已部署系统升级前，请先备份数据库、导出关键表数据，再在新数据库中执行 baseline migration 后导入数据。
 
 当前关键迁移表：
 
@@ -30,7 +29,7 @@ pnpm run db:import -- exports/activation-core-export.json
 
 1. 备份旧数据库
 2. 导出关键表数据
-3. 在新数据库中执行新的数据库脚本或 Drizzle migration
+3. 在新数据库中执行 Drizzle migration
 4. 再执行数据导入
 
 ## 功能特性
@@ -73,11 +72,13 @@ NODE_ENV=development
 
 ### 3. 初始化数据库
 
-在 PostgreSQL 中执行：
+执行 Drizzle migration：
 
 ```bash
-scripts/init-db.sql
+pnpm run db:migrate
 ```
+
+如需查看当前 baseline SQL，可参考 `scripts/init-db.sql`，但新部署不再推荐手动执行旧式初始化脚本。
 
 ### 4. 启动项目
 
@@ -110,10 +111,12 @@ pnpm run hash-password -- <password>
 
 ```text
 src/
+  db/           Drizzle 客户端、Schema 与 Repository
+  server/       服务端业务入口与领域服务
   app/          路由与页面
   components/   界面与后台组件
   contexts/     前端状态管理
-  lib/          鉴权、数据库、签名与工具函数
+  lib/          鉴权、签名与通用工具函数
 scripts/        数据库与辅助脚本
 example/        客户端示例
 ```

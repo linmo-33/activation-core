@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { batchDeleteActivationCodes, batchResetActivationCodes } from '@/server/activation';
 
 /**
  * 批量操作激活码 API
@@ -46,28 +46,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let result;
+    let processed;
     let message;
 
     switch (action) {
       case 'delete':
         // 批量删除激活码
-        result = await query(
-          `DELETE FROM activation_codes WHERE id = ANY($1::int[])`,
-          [validIds]
-        );
-        message = `成功删除 ${result.rowCount} 个激活码`;
+        processed = await batchDeleteActivationCodes(validIds);
+        message = `成功删除 ${processed} 个激活码`;
         break;
 
       case 'reset':
         // 批量重置激活码
-        result = await query(
-          `UPDATE activation_codes 
-           SET status = 'unused', used_by_device_id = NULL, used_at = NULL 
-           WHERE id = ANY($1::int[]) AND status = 'used'`,
-          [validIds]
-        );
-        message = `成功重置 ${result.rowCount} 个激活码`;
+        processed = await batchResetActivationCodes(validIds);
+        message = `成功重置 ${processed} 个激活码`;
         break;
 
       default:
@@ -86,7 +78,7 @@ export async function POST(request: NextRequest) {
         message,
         data: {
           action,
-          processed: result.rowCount,
+          processed,
           requested: validIds.length
         }
       },
@@ -105,5 +97,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

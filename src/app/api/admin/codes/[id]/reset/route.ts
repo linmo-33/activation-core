@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resetActivationCode } from '@/lib/db';
+import { resetActivationCode } from '@/server/activation';
 import { formatDateTimeForAPI } from '@/lib/utils';
 
 /**

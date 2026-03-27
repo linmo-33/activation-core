@@ -7,7 +7,7 @@ import {
   getAdminLoginGuardStatus,
   isAdminSystemInitialized,
   recordAdminLoginFailure
-} from '@/lib/db';
+} from '@/server/admin';
 import {
   createAdminSessionToken,
   getAdminSessionCookieOptions,

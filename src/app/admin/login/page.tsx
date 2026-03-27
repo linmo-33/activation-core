@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { isAdminSystemInitialized } from "@/lib/db";
+import { isAdminSystemInitialized } from "@/server/admin";
 import { AdminLoginForm, LoginPageSkeleton } from "@/components/admin/login-form";
 
 export const dynamic = "force-dynamic";

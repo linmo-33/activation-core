@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActivationCodes, createActivationCodes } from '@/lib/db';
+import { getActivationCodes, createActivationCodes } from '@/server/activation';
 import { generateUniqueActivationCodes, formatDateTimeForAPI } from '@/lib/utils';
 
 // 使用工具函数生成激活码
@@ -190,5 +190,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
