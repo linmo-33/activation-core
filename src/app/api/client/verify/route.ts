@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkDeviceActivationStatus } from '@/lib/db';
+import { checkDeviceActivationStatus } from '@/server/activation';
 import { formatDateTimeForAPI } from '@/lib/utils';
 import { checkRateLimit, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 import { createLicenseToken, generateNonce, getKeyInfo } from '@/lib/signing';

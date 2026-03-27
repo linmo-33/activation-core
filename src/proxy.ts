@@ -38,8 +38,6 @@ const protectedApiPaths = [
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  console.log('中间件处理路径:', pathname);
-
   // 检查是否是需要保护的路径
   const isProtectedPath = protectedPaths.some(path =>
     pathname === path || pathname.startsWith(path + '/')
@@ -49,11 +47,8 @@ export async function proxy(request: NextRequest) {
     pathname === path || pathname.startsWith(path + '/')
   );
 
-  console.log('路径保护状态:', { pathname, isProtectedPath, isProtectedApiPath });
-
   // 如果不是保护的路径，直接通过
   if (!isProtectedPath && !isProtectedApiPath) {
-    console.log('路径不需要保护，直接通过');
     return NextResponse.next();
   }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { createInitialAdmin, isAdminSystemInitialized } from '@/lib/db';
+import { createInitialAdmin, isAdminSystemInitialized } from '@/server/admin';
 import {
   createAdminSessionToken,
   getAdminSessionCookieOptions,

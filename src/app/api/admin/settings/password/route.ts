@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { getAdminById, updateAdminPassword } from '@/server/admin';
 import bcrypt from 'bcryptjs';
 import { formatDateTimeForAPI } from '@/lib/utils';
 
@@ -57,19 +57,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取当前管理员信息
-    const adminResult = await query(
-      'SELECT id, username, password_hash FROM admin_users WHERE id = $1',
-      [adminId]
-    );
+    const admin = await getAdminById(adminId);
 
-    if (adminResult.rows.length === 0) {
+    if (!admin) {
       return NextResponse.json(
         { success: false, message: '管理员账户不存在' },
         { status: 404 }
       );
     }
-
-    const admin = adminResult.rows[0];
 
     // 验证当前密码
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password_hash);
@@ -85,12 +80,9 @@ export async function POST(request: NextRequest) {
     const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
 
     // 更新密码
-    const updateResult = await query(
-      'UPDATE admin_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [newPasswordHash, adminId]
-    );
+    const updated = await updateAdminPassword(adminId, newPasswordHash);
 
-    if (updateResult.rowCount === 0) {
+    if (!updated) {
       return NextResponse.json(
         { success: false, message: '密码更新失败' },
         { status: 500 }
@@ -124,5 +116,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

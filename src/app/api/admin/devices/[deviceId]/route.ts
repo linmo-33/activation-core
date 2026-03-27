@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDeviceActivationHistory, checkDeviceActivationStatus } from '@/lib/db';
+import { getDeviceActivationHistory, checkDeviceActivationStatus, resetDeviceValidActivations } from '@/server/activation';
 import { formatDateTimeForAPI } from '@/lib/utils';
 
 /**
@@ -104,17 +104,7 @@ export async function DELETE(
     const adminUsername = request.headers.get('x-admin-username');
 
     // 只重置该设备有效期内的激活码，保留历史记录
-    const { query } = await import('@/lib/db');
-    const result = await query(
-      `UPDATE activation_codes
-       SET status = 'unused', used_by_device_id = NULL, used_at = NULL
-       WHERE used_by_device_id = $1
-         AND status = 'used'
-         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
-      [deviceId]
-    );
-
-    const resetCount = result.rowCount || 0;
+    const resetCount = await resetDeviceValidActivations(deviceId);
 
     // 记录管理员操作日志
     console.log(`🔧 管理员重置设备: ${adminUsername}(${adminId}) 重置设备 ${deviceId}, 释放 ${resetCount} 个有效激活码`);

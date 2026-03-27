@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateActivationCode } from '@/lib/db';
+import { validateActivationCode } from '@/server/activation';
 import { cleanActivationCode, isValidActivationCodeFormat, formatDateTimeForAPI } from '@/lib/utils';
 import { checkRateLimit, getClientIP, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 import { createLicenseToken, generateNonce, getKeyInfo } from '@/lib/signing';
