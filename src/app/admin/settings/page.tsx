@@ -1,31 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { AdminLayout } from "@/components/layout/admin-layout-client";
-import { CleanupExpiredCodesDialog } from "@/components/admin/cleanup-expired-codes-dialog";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Eye,
+  EyeOff,
+  Lock,
+  Save,
+} from "lucide-react";
+import { AdminLayout } from "@/components/layout/admin-layout-client";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { useToast } from "@/hooks/use-toast";
-import { Lock, AlertTriangle, Save, Eye, EyeOff, Settings } from "lucide-react";
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
-
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  // 密码修改表单
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -47,7 +41,7 @@ export default function SettingsPage() {
     if (passwordForm.newPassword.length < 6) {
       toast({
         title: "密码强度不足",
-        description: "新密码长度至少为6个字符",
+        description: "新密码长度至少为 6 个字符",
         variant: "warning",
       });
       return;
@@ -97,38 +91,32 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDatabaseCleanup = () => {
-    setCleanupDialogOpen(true);
-  };
-
-  const handleCleanupComplete = () => {
-    // 清理完成后的回调，可以在这里刷新其他数据
-    console.log("清理操作完成");
-  };
-
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* 页面标题 */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">系统设置</h1>
-          <p className="text-muted-foreground">
-            管理系统配置、安全设置和维护操作
-          </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="data-kicker">账号与安全</div>
+            <div>
+              <h1 className="text-4xl font-semibold tracking-[-0.05em]">系统设置</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                修改管理员密码。
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* 密码修改 */}
+        <div className="max-w-3xl">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Lock className="mr-2 h-5 w-5" />
+            <CardHeader className="border-b border-border/70 pb-5">
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
                 修改密码
               </CardTitle>
-              <CardDescription>更改管理员账户密码</CardDescription>
+              <CardDescription>更新管理员账号密码。</CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePasswordChange} className="space-y-4">
+            <CardContent className="pt-6">
+              <form onSubmit={handlePasswordChange} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">当前密码</Label>
                   <div className="relative">
@@ -143,21 +131,16 @@ export default function SettingsPage() {
                         })
                       }
                       required
+                      className="pr-11"
                     />
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() =>
-                        setShowCurrentPassword(!showCurrentPassword)
-                      }
+                      size="icon"
+                      className="absolute right-1 top-1 h-9 w-9 rounded-lg text-muted-foreground"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
@@ -177,19 +160,16 @@ export default function SettingsPage() {
                       }
                       required
                       minLength={6}
+                      className="pr-11"
                     />
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      size="icon"
+                      className="absolute right-1 top-1 h-9 w-9 rounded-lg text-muted-foreground"
                       onClick={() => setShowNewPassword(!showNewPassword)}
                     >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
@@ -210,49 +190,21 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Button type="submit" disabled={isLoading}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isLoading ? "修改中..." : "修改密码"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                <div className="rounded-[1.4rem] border border-border/70 bg-background/72 p-4 text-sm leading-6 text-muted-foreground">
+                  新密码长度至少 6 位。修改成功后，新的登录凭据会立即生效。
+                </div>
 
-          {/* 系统维护 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="mr-2 h-5 w-5" />
-                系统维护
-              </CardTitle>
-              <CardDescription>数据库清理和维护操作</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>数据库清理</Label>
-                <p className="text-sm text-muted-foreground">
-                  清理过期的激活码以释放存储空间
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={handleDatabaseCleanup}
-                  disabled={isLoading}
-                >
-                  <AlertTriangle className="mr-2 h-4 w-4" />
-                  清理过期数据
-                </Button>
-              </div>
+                <div className="flex justify-end border-t border-border/70 pt-5">
+                  <Button type="submit" disabled={isLoading}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {isLoading ? "修改中..." : "保存新密码"}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* 清理过期激活码弹窗 */}
-      <CleanupExpiredCodesDialog
-        open={cleanupDialogOpen}
-        onOpenChange={setCleanupDialogOpen}
-        onCleanupComplete={handleCleanupComplete}
-      />
     </AdminLayout>
   );
 }
