@@ -1,28 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AdminLayout } from "@/components/layout/admin-layout-client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Clock3,
+  Key,
+  Plus,
+} from "lucide-react";
+import { AdminLayout } from "@/components/layout/admin-layout-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Key,
-  Users,
-  Clock,
-  AlertTriangle,
-  Plus,
-  BarChart3,
-  TrendingUp,
-  Shield,
-  Settings,
-} from "lucide-react";
-import Link from "next/link";
 
 interface DashboardStats {
   total_codes?: number;
@@ -31,7 +18,6 @@ interface DashboardStats {
   expired_codes?: number;
   usage_rate?: number;
   active_rate?: number;
-  // 兼容旧格式
   total?: number;
   unused?: number;
   used?: number;
@@ -45,6 +31,10 @@ interface RecentActivation {
   used_at: string;
 }
 
+function formatNumber(value: number) {
+  return value.toLocaleString();
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     total_codes: 0,
@@ -54,10 +44,7 @@ export default function AdminDashboard() {
     usage_rate: 0,
     active_rate: 0,
   });
-
-  const [recentActivations, setRecentActivations] = useState<
-    RecentActivation[]
-  >([]);
+  const [recentActivations, setRecentActivations] = useState<RecentActivation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -66,7 +53,6 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // 获取基础统计数据
       const statsResponse = await fetch("/api/admin/stats");
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
@@ -83,10 +69,7 @@ export default function AdminDashboard() {
         });
       }
 
-      // 获取最近激活记录
-      const recentResponse = await fetch(
-        "/api/admin/codes?status=used&limit=5"
-      );
+      const recentResponse = await fetch("/api/admin/codes?status=used&limit=5");
       if (recentResponse.ok) {
         const recentData = await recentResponse.json();
         setRecentActivations(
@@ -100,181 +83,133 @@ export default function AdminDashboard() {
     }
   };
 
+  const totalCodes = stats.total_codes || stats.total || 0;
+  const unusedCodes = stats.unused_codes || stats.unused || 0;
+  const usedCodes = stats.used_codes || stats.used || 0;
+  const expiredCodes = stats.expired_codes || stats.expired || 0;
+
+  const summaryItems = [
+    {
+      label: "总激活码",
+      value: totalCodes,
+      detail: stats.usage_rate ? `使用率 ${stats.usage_rate.toFixed(1)}%` : "当前总量",
+    },
+    {
+      label: "未使用",
+      value: unusedCodes,
+      detail: "可立即分发",
+    },
+    {
+      label: "已使用",
+      value: usedCodes,
+      detail: "已绑定设备",
+    },
+    {
+      label: "已过期",
+      value: expiredCodes,
+      detail: expiredCodes > 0 ? "建议清理" : "当前无积压",
+    },
+  ];
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* 欢迎信息 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">仪表板</h1>
-            <p className="text-muted-foreground">
-              欢迎回来！这里是您的激活码管理概览。
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/admin/generate">
-              <Plus className="mr-2 h-4 w-4" />
-              生成激活码
-            </Link>
-          </Button>
-        </div>
-
-        {/* 统计卡片 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">总激活码</CardTitle>
-              <Key className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {(stats.total_codes || stats.total || 0).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <TrendingUp className="inline h-3 w-3 mr-1" />
-                {stats.usage_rate
-                  ? `使用率 ${stats.usage_rate.toFixed(1)}%`
-                  : "系统总量"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">未使用</CardTitle>
-              <Shield className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {(stats.unused_codes || stats.unused || 0).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">可用激活码数量</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">已使用</CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {(stats.used_codes || stats.used || 0).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">已激活设备数量</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">已过期</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {(stats.expired_codes || stats.expired || 0).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">需要清理的过期码</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 主要内容区域 */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* 最近激活记录 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Clock className="mr-2 h-5 w-5" />
-                最近激活记录
-              </CardTitle>
-              <CardDescription>最新的激活码使用情况</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {isLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <div className="animate-pulse">加载中...</div>
+        <section className="mono-panel overflow-hidden">
+          <div className="grid gap-8 p-7 lg:grid-cols-[1.2fr_0.8fr] lg:p-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div className="data-kicker">系统概览</div>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <h1 className="text-4xl font-semibold tracking-[-0.05em]">
+                      后台概览
+                    </h1>
+                    <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+                      查看激活码库存、最近使用记录和当前需要处理的状态。
+                    </p>
                   </div>
+                  <Button asChild size="lg">
+                    <Link href="/admin/generate">
+                      <Plus className="mr-2 h-4 w-4" />
+                      生成激活码
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {summaryItems.map((item) => (
+                  <div
+                    key={item.label}
+                    className="hover-lift rounded-[1.4rem] border border-border/80 bg-background/75 p-5"
+                  >
+                    <div className="data-kicker">{item.label}</div>
+                    <div className="mt-4 text-3xl font-semibold tracking-[-0.05em] display-code">
+                      {isLoading ? "..." : formatNumber(item.value)}
+                    </div>
+                    <div className="mt-2 text-sm text-muted-foreground">{item.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[1.6rem] border border-border/80 bg-background/72 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="data-kicker">最近记录</div>
+                  <div className="mt-2 text-xl font-semibold tracking-[-0.03em]">
+                    最近激活
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/admin/codes?status=used">查看全部</Link>
+                </Button>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-border/70 bg-card/70 p-4 animate-pulse"
+                    >
+                      <div className="h-4 w-24 rounded bg-muted" />
+                      <div className="mt-3 h-3 w-40 rounded bg-muted" />
+                    </div>
+                  ))
                 ) : recentActivations.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    暂无激活记录
+                  <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                    当前没有最近激活记录。
                   </div>
                 ) : (
                   recentActivations.map((activation) => (
                     <div
                       key={activation.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="hover-lift flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-card/70 p-4"
                     >
-                      <div className="space-y-1">
-                        <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      <div className="min-w-0 space-y-2">
+                        <div className="display-code text-sm font-semibold tracking-[0.02em]">
                           {activation.code}
-                        </code>
-                        <p className="text-xs text-muted-foreground">
-                          设备: {activation.used_by_device_id}
-                        </p>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          设备标识：{activation.used_by_device_id}
+                        </div>
                       </div>
-                      <div className="text-right space-y-1">
+
+                      <div className="shrink-0 text-right">
                         <Badge variant="secondary">已使用</Badge>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="mt-2 text-xs text-muted-foreground">
                           {activation.used_at}
-                        </p>
+                        </div>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-              <div className="mt-4">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/admin/codes?status=used">查看全部记录</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </section>
 
-          {/* 快速操作 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="mr-2 h-5 w-5" />
-                快速操作
-              </CardTitle>
-              <CardDescription>常用的管理操作</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full justify-start" size="lg" asChild>
-                <Link href="/admin/generate">
-                  <Plus className="mr-2 h-4 w-4" />
-                  批量生成激活码
-                </Link>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                size="lg"
-                asChild
-              >
-                <Link href="/admin/codes">
-                  <Key className="mr-2 h-4 w-4" />
-                  查看激活码列表
-                </Link>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                size="lg"
-                asChild
-              >
-                <Link href="/admin/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  系统设置
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </AdminLayout>
   );
